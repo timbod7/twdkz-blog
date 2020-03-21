@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Using ADL from haskell">
+    <meta name="twitter:description" content="The basic of using ADL from haskell">
+        <title>Using ADL from haskell</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" alt="Github Profile"/>
+        </a>
+
+        <div id="theme-button">DAY</div>
+        </div>
+    </header>
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                Using ADL from haskell
+            </span>
+            <br>
+
+            <br>
+            <span class="byline">by Tim Docker</span>
+            <br>
+            <span class="date">2019-09-17</span>
+            <br>
+            <div class="metadata">
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <p>The <a href="https://github.com/timbod7/adl">ADL</a> system has proven valuable at <a href="https://www.helixta.com.au/">Helix</a>. We use it in most of our projects, as a strongly typed schema language for specifying:</p>
+<ul>
+<li>http apis (in lieu of <a href="https://swagger.io/specification/">openapi/swagger</a>)</li>
+<li>database schemas (in lieu of sql)</li>
+<li>configuration files</li>
+<li>user interface forms</li>
+</ul>
+<p>and then as the base for code generation in haskell, java, rust, c++ and typescript.</p>
+<p>But, because ADL has a variety of uses, the path to getting started can be unclear. As a small stand alone example, this post shows how ADL can be used to specify the syntax of a <a href="https://en.wikipedia.org/wiki/YAML">yaml</a> configuration file, and automate its parsing into haskell.</p>
+<p>To follow along with this project, you'll need the ADL compiler <a href="https://github.com/timbod7/adl/blob/master/docs/install.md">installed</a> and on your shell PATH.</p>
+<p>We'll assume that our project is some sort of server which will load a yaml configuration at startup. Jumping right in, we can specify the config schema in a file <code>adl/config.adl</code>:</p>
+<pre><code>module config {
+
+struct ServerConfig {
+  Int32 port;
+  Protocol protocol = &quot;http&quot;;
+  LogLevel logLevel = &quot;info&quot;;
+};
+
+union Protocol {
+  Void http;
+  SslConfiguration https;
+};
+
+struct SslConfiguration {
+  FilePath certificate;
+  FilePath certificateKey;
+};
+
+type FilePath = String;
+
+union LogLevel {
+  Void error;
+  Void warn;
+  Void info;
+  Void debug;
+  Void trace;
+};
+
+};</code></pre>
+<p>Being minimal, our <code>ServerConfig</code> has a port, some protocol information, and a logging level. The port has no default value, so is required in the configuration. The other fields are optional, with the given defaults being used in their absence. Note the protocol field is a union (aka a sum type). If it is <code>http</code> then no other information is required. However, if the protocol is <code>https</code> then paths for ssl certificate details are required. The full syntax and meaning of ADL is in the <a href="https://github.com/timbod7/adl/blob/master/docs/language.md">language documentation</a>.</p>
+<p>We've specified the data type for the server configuration, and we could now run the compiler to generate the corresponding haskell types and support code. The compiler does its best to generate idiomatic code in the target languages, but additional language specific information can improve the generated code. <a href="https://github.com/timbod7/adl/blob/master/docs/language.md#annotations">ADL annotations</a> are used for this. Such annotations can be included in-line in the adl source code, though this get a little noisy when annotations are included for multiple targets - it gets hard to see the core type definitions themselves in a sea of annotations.</p>
+<p>Hence ADL has a standard pattern for language specific annotations: such annotations for an ADL file x.adl are kept in the file x.adl-lang. Hence the adl compiler, when reading <code>config.adl</code> to generate haskell code, will look for and include the adl file <code>config.adl-hs</code> for haskell related annotations.</p>
+<p>In this example, <code>config.adl-hs</code> is straightforward:</p>
+<pre><code>module config {
+
+import adlc.config.haskell.*;
+
+annotation ServerConfig HaskellFieldPrefix &quot;sc_&quot;;
+annotation Protocol HaskellFieldPrefix &quot;p_&quot;;
+annotation SslConfiguration HaskellFieldPrefix &quot;ssl_&quot;;
+annotation LogLevel HaskellFieldPrefix &quot;log_&quot;;
+};</code></pre>
+<p>Recent language extensions notwithstanding, haskell's record system is somewhat primitive (try a google search for "haskell record problem"). A key issue is that record field names need to be unique in their containing module. To ensure this, by default, the haskell ADL code generator prefixes each field with its type name. Hence the <code>ServerConfig</code> declaration would generate:</p>
+<pre><code>data ServerConfig = ServerConfig
+    { serverConfig_port :: Data.Int.Int32
+    , serverConfig_protocol :: Protocol
+    , serverConfig_logLevel :: LogLevel
+    }</code></pre>
+<p>Whilst this guarantees that the generated code will compile, those field names are unwieldy. Hence the <a href="https://github.com/timbod7/adl/blob/master/haskell/compiler/lib/adl/adlc/config/haskell.adl#L3">HaskellFieldPrefix</a> annotation allows a custom (or no) prefix to be used. With the above <code>config.adl-hs</code> annotations, we get a more friendly:</p>
+<pre><code>data ServerConfig = ServerConfig
+    { sc_port :: Data.Int.Int32
+    , sc_protocol :: Protocol
+    , sc_logLevel :: LogLevel
+    }</code></pre>
+<p>With the ADL written it's time to run the ADL compiler to generate the haskell code:</p>
+<pre><code>adlc haskell \
+  --outputdir src \
+  --package ADL \
+  --rtpackage ADL.Core \
+  --include-rt \
+  --searchdir adl \
+  adl/*.adl</code></pre>
+<p>The <code>--include-rt</code> and <code>--rtpackage</code> arguments tell the code generator to include the runtime support files, making the generated code self contained. See the haskell backend <a href="https://github.com/timbod7/adl/blob/master/docs/backend-haskell.md">documentation</a> for details.</p>
+<p>I generally check the generated code into the source repository. Whilst this approach has some drawbacks, it has benefits too:</p>
+<ul>
+<li>you don't need the ADL compiler installed to build the package</li>
+<li>you can build with your off-the shelf standard build system (<a href="https://www.haskell.org/cabal/">cabal</a>, <a href="https://doc.rust-lang.org/cargo/">cargo</a>, <a href="https://www.typescriptlang.org/docs/handbook/compiler-options.html">tsc</a> etc)</li>
+</ul>
+<p>The main downside is that changing the source ADL requires explicitly rerunning the ADL compiler. In most projects I have a <code>scripts/generate-adl.sh</code> script to automate this step. Of course, if your build system is up to it, you may wish to generate the ADL derived code on demand.</p>
+<p>We can now write some haskell code!</p>
+<p>ADL's core serialization schema is json (a alternate binary scheme is planned). In the generated haskell, every ADL value is an instance of the <a href="https://github.com/timbod7/adl/blob/master/haskell/runtime/src/ADL/Core/Value.hs#L67">AdlValue</a> type class, and then the library has helper functions to automate deserialization:</p>
+<pre><code>adlFromByteString :: AdlValue a =&gt; LBS.ByteString -&gt; ParseResult a
+adlFromJsonFile :: AdlValue a =&gt; FilePath -&gt; IO (ParseResult a)
+decodeAdlParseResult :: AdlValue a =&gt; T.Text -&gt; ParseResult a -&gt; Either T.Text a</code></pre>
+<p>If one wished to have a configuration file in json format, the latter two functions are sufficient to read and parse such a file. But json is less than ideal for human written configuration, due to its lack of support for comments, and its rigid syntax. The ADL core doesn't have yaml support, but conveniently the haskell <a href="http://hackage.haskell.org/package/yaml">Data.Yaml</a> package can parse yaml into json values, which the ADL core can then parse into ADL values. This is the approach we will take, and we write a yaml specific function to load an arbitrary ADL value:</p>
+<pre><code>import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as T
+import qualified Data.Yaml as Y
+import ADL.Core(runJsonParser, decodeAdlParseResult, AdlValue(..), ParseResult(..))
+
+adlFromYamlFile :: AdlValue a =&gt; FilePath -&gt; IO (Either T.Text a)
+adlFromYamlFile file = (decodeAdlParseResult from . adlFromYamlByteString) &lt;$&gt; (LBS.readFile file)
+  where
+    adlFromYamlByteString :: (AdlValue a) =&gt; LBS.ByteString -&gt; (ParseResult a)
+    adlFromYamlByteString lbs = case Y.decodeEither&#39; (LBS.toStrict lbs) of
+      (Left e) -&gt; ParseFailure (&quot;Invalid yaml:&quot; &lt;&gt; T.pack (Y.prettyPrintParseException e)) []
+      (Right jv) -&gt; runJsonParser jsonParser [] jv
+
+    from = &quot; from &quot; &lt;&gt; T.pack file</code></pre>
+<p>Hopefully this is fairly self explanatory. It:</p>
+<ul>
+<li>reads the input file contents as a bytestring</li>
+<li>parses the yaml parser into a in-memory json value</li>
+<li>parses the in memory json value into an adl value</li>
+</ul>
+<p>whilst turning parse failures at either level into user friendly error messages.</p>
+<p>With this helper function, the scaffolding for our server process is straightforward. We read an environment variable for the configuration file path, use the <code>adlFromYamlFile</code> written previously, and launch our (dummy) server code.</p>
+<pre><code>main :: IO ()
+main = do
+  let configEnvVar = &quot;CONFIG_PATH&quot;
+  mEnvPath &lt;- lookupEnv configEnvVar
+  case mEnvPath of
+    Nothing -&gt; exitWithError (configEnvVar &lt;&gt; &quot; not set in environment&quot;)
+    (Just envPath) -&gt; do
+      eConfig &lt;- adlFromYamlFile envPath
+      case eConfig of
+        (Left emsg) -&gt; exitWithError (T.unpack emsg)
+        (Right config) -&gt; startServer config
+
+exitWithError :: String -&gt; IO ()
+exitWithError emsg = do
+  hPutStrLn stderr emsg
+  exitFailure
+  
+startServer :: ServerConfig -&gt; IO ()
+startServer sc = do
+  case sc_protocol sc of
+    P_http -&gt; putStrLn (&quot;Starting http server on port &quot; ++ (show (sc_port sc)))
+    P_https{} -&gt; putStrLn (&quot;Starting https server on port &quot; ++ (show (sc_port sc)))
+  threadDelay 1000000000</code></pre>
+<p>The simplest configuration yaml specifies just the port, relying on the ADL defaults for other fields:</p>
+<pre><code>port: 8080</code></pre>
+<p>An example that overrides the protocol, and hence must provide additional information:</p>
+<pre><code>port: 8443
+protocol:
+  https:
+    certificate: /tmp/certificate.crt
+    certificateKey: /tmp/certificate.key</code></pre>
+<p>The ADL json/yaml serialization schema is straightforward. One point of note is that ADL unions (like <code>Protocol</code> in the example) are serialized as single element objects. See the <a href="https://github.com/timbod7/adl/blob/master/docs/serialization.md">serialisation documentation</a> for details.</p>
+<p>The parser provides helpful error messages. In the above example config, if you leave out the last line and fail to set the SSL key, the error is:</p>
+<pre><code>Unable to parse a value of type config.ServerConfig from demo-server-example3.yaml:
+expected field certificateKey at protocol.https</code></pre>
+<p>Hopefully this post has given a simple but useful demonstration of ADL usage from haskell. It's really only a starting point - the ADL system's value increases dramatically when used to ensure consist types between systems written in multiple languages.</p>
+<p>The complete code for this demonstration, include build and dependency configuration can be found in its <a href="https://github.com/timbod7/adl-demo-hs">github repo</a>.</p>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: Using ADL from haskell - " data-via="null">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>
