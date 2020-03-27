@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Teenage haskell">
+    <meta name="twitter:description" content="">
+        <title>Teenage haskell</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" alt="Github Profile"/>
+        </a>
+
+        <div id="theme-button">DAY</div>
+        </div>
+    </header>
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                Teenage haskell
+            </span>
+            <br>
+
+            <br>
+            <span class="byline">by Tim Docker</span>
+            <br>
+            <span class="date">2014-06-26</span>
+            <br>
+            <div class="metadata">
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <p>I've been inspired by the efforts of others (<a href="http://cdsmith.wordpress.com/2011/08/16/haskell-for-kids-week-1/">Chris Smith</a>, <a href="http://justtesting.org/post/70871612766/lets-program">Manuel Chakravarty</a>) to try teaching children haskell as a first experience of programming. Haskell has a reputation of being a "hard" language, but I suspect this stems from the challenges faced by software developers transitioning from an imperative programming paradigm to a functional one. There's anecdotal evidence that, for first steps into programming, a functional programming language may be easier for many students, and allow a class to focus more quickly on interesting aspects of programming.</p>
+<p>With any group of beginners, and especially children, simple tooling is really important. Being able to run examples in minutes of turning on the computer is really important. But running even the simplest of traditional toolchains requires at least a rudimentary understanding of:</p>
+<ul>
+<li>a text editor</li>
+<li>the file system</li>
+<li>a command line</li>
+<li>an interpreter/compiler</li>
+</ul>
+<p>And there's platform issues here also - even when the language is platform independent the other items will vary. It would be very easy to get bogged down in all this well before actually writing a program that does something interesting...</p>
+<p>Hence I was excited several weeks ago when Chris <a href="http://cdsmith.wordpress.com/2014/06/03/codeworld-rises-again/">announced the reimplementation</a> of his codeworld environment. In a nutshell, it's a web site where:</p>
+<p>1) you edit haskell code in your browser 2) it gets compiled to java script on the remote server using ghcjs 3) the javascript runs back in the browser</p>
+<p>and it comes with a <a href="http://codeworld.info/doc/Prelude.html">beginner-friendly prelude</a> focussed on creating pictures, animations, and simple games (no monads required!).</p>
+<p>This was just in time for school holidays here in Sydney - my own children to be my "guinea pig" students. Nick (aged 14) is in year 9 at school, whereas Sam (aged 12) is in year 7. At school they have covered simple algebra, number planes, and other math ripe to be used for something more fun than drill exercises! They have a younger brother Henry (aged 10), who has being observing with interest.</p>
+<p>Our goal is to learn to draw pictures, then move on to animations, and, further down the track (if we get there) write some games. After a couple of 2 hour sessions, it has gone remarkably well.</p>
+<p>So what have we done? Here's a short outline of our two sessions so far:</p>
+<h2 id="session-1-25-hours">Session 1 (2.5 hours):</h2>
+<p>We discussed the nature of computers, programming languages, compilers.</p>
+<p>We launched the codeworld environment, and played with the demos. We tried changing them, mostly by adjusting various constants, and found they broke in often entertaining ways.</p>
+<p>We typed in a trivial 2 line program to draw a circle, and made it work. We observed how problems were reported in the log window.</p>
+<p>We talked about what a function is, and looked at a few of the builtin functions:</p>
+<pre><code>solidCircle :: Number -&gt; Picture
+color :: Color -&gt; Picture -&gt; Picture
+(&amp;) :: Picture -&gt; Picture -&gt; Picture</code></pre>
+<p>... and looked at how they can be composed using haskell syntax.</p>
+<p>Then we played!</p>
+<p>After this, we introduced some extra functions:</p>
+<pre><code>solidRectangle :: Number -&gt; Number -&gt; Picture
+translate :: Number -&gt; Number -&gt; Picture -&gt; Picture
+rotate :: Number -&gt; Picture -&gt; Picture
+scale :: Number -&gt; Number -&gt; Picture -&gt; Picture</code></pre>
+<p>which let us draw much more interesting stuff. The rest of this session was spent seeing what cool stuff we could draw with these 7 functions.</p>
+<p>Nick programmed some abstract art:</p>
+<p><img src="2014-06-26-teenage-haskell/art.png" /></p>
+<p>Sam coded up a sheep:</p>
+<p><img src="2014-06-26-teenage-haskell/sheep.png" /></p>
+<p>That ended the session, though the boys found some unsupervised time on the computer the next day, when Nick built a castle:</p>
+<p><img src="2014-06-26-teenage-haskell/castle.png" /></p>
+<p>and Sam did some virtual surfing:</p>
+<p><img src="2014-06-26-teenage-haskell/boards.png" /></p>
+<h2 id="session-2-2-hours">Session 2 (2 hours):</h2>
+<p>In the second session, we started by talked about organising code for clarity and reuse.</p>
+<p>The transformation functions introduced in the previous session caused some confusion when used in combination. We talked about how each primitive worked, and how they combined - the different between rotating and then translating versus translating then rotating was investigated.</p>
+<p>The boys were keen to move on to animations. I thought we'd leave this for a few sessions, but their enthusiasm overruled. This required that we looked at how to write our own functions for the first time. (In codeworld an animation is a function from time to a picture). This is quite a big step, as we needed to get at least a basic idea of scoping also.</p>
+<p>Nevertheless we battled on, and got some movement on the screen. It was soon discovered that rotations are the most interesting transform to animate, as you don't lose you picture elements off the screen as time goes to infinity!</p>
+<p>Nick and Sam needed more assistance here, but still managed to get some ideas working. I've only got single frames of their results. Sam produced his space race:</p>
+<p><img src="2014-06-26-teenage-haskell/space-race.png" /></p>
+<p>and Nick made a working clock (which tells the right time if you push the run button at 12 oclock!):</p>
+<p><img src="2014-06-26-teenage-haskell/clock.png" /></p>
+<p>In the next session we are going to have to look at numerical functions in a bit more detail in order to produce more types of animations. Time for some graph paper perhaps...</p>
+<h2 id="summary">Summary</h2>
+<p>For a beta (alpha?) piece of software, relying on some fairly advanced and new technology, Codeworld works remarkably well. And Chris has plans for it - there's a long list of proposed enhancements in the github issue tracker, and a mailing list has just been created.</p>
+<p>Right now the main issue is documentation. It works well with an already haskell-literate tutor. Others may want to wait for the documentation, course guides, etc to be written.</p>
+<p>If you are a haskell enthusiast, Give it a try!</p>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: Teenage haskell - " data-via="null">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>

@@ -95,7 +95,15 @@ buildPost srcPath = cacheAction ("build" :: T.Text, srcPath) $ do
   let fullPostData = withSiteMeta . withPostUrl $ postData
   template <- compileTemplate' "site/templates/post.html"
   writeFile' (outputFolder </> T.unpack postUrl) . T.unpack $ substitute template fullPostData
-  convert fullPostData
+  post <- convert fullPostData
+  let datadir = dropExtensions srcPath
+      postdir = dropDirectory1 datadir
+  -- Copy static files from the per-post direcory
+  -- (Same name as the most, without the .md ext)
+  staticpaths <- getDirectoryFiles datadir ["*"]
+  void $ forP staticpaths $ \filepath ->
+     copyFileChanged (datadir </> filepath) (outputFolder </> postdir </> filepath)
+  return post
 
 -- | Copy all static files from the listed folders to their destination
 copyStaticFiles :: Action ()

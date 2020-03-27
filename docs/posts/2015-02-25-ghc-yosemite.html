@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Haskell on Yosemite (OSX 10.10)">
+    <meta name="twitter:description" content="">
+        <title>Haskell on Yosemite (OSX 10.10)</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/syntax.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a id="beacon" href="/">
+                <div id="home-text"> HOME </div>
+            </a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" alt="Github Profile"/>
+        </a>
+
+        <div id="theme-button">DAY</div>
+        </div>
+    </header>
+
+<div id="page">
+    <div class="wrapper">
+        <div class="masthead">
+            <span class="title">
+                Haskell on Yosemite (OSX 10.10)
+            </span>
+            <br>
+
+            <br>
+            <span class="byline">by Tim Docker</span>
+            <br>
+            <span class="date">2015-02-25</span>
+            <br>
+            <div class="metadata">
+            </div>
+        </div>
+    </div>
+    <article class="post">
+        <h1 id="update-2016-05-16">Update (2016-05-16)</h1>
+<p>Most of the information below is now out of date. The <a href="http://docs.haskellstack.org/en/stable/README/">stack</a> build tool has made everything <em>much</em> simpler. Getting started just a case of installing with</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1"></a><span class="ex">brew</span> install haskell-stack</span></code></pre></div>
+<p>... and then leaving the management of ghc installations up to stack.</p>
+<hr />
+<h1 id="haskell-on-yosemite-osx-1010">Haskell on Yosemite (OSX 10.10)</h1>
+<p>Nearly all my development has been done under linux. Only occasionally have I worked under osx. This is all to change - osx is to be my primary development platform. In the past, my experiences with ghc on osx have been a little fraught. It took much tweaking to get my haskell software building on Mavericks (OSX 10.9). Problems I had included:</p>
+<ul>
+<li><a href="https://ghc.haskell.org/trac/ghc/ticket/8197">issues</a> with ghc 7.6 and the xcode c preprocessor</li>
+<li>manual management of the c dependencies of various packages, and then getting cabal to find them</li>
+<li>getting gtk to build</li>
+</ul>
+<p>etc, etc.</p>
+<p>I'm pleased to discover that things have improved immensely. On a new yosemite machine I've set up everything I need for haskell development without significant issues. A combination of 3 things work together:</p>
+<ul>
+<li>The <a href="https://ghcformacosx.github.io">"ghcformacosx"</a> minimal distribution</li>
+<li>The <a href="http://brew.sh">brew</a> OSX package manager</li>
+<li>Cabal sandboxes</li>
+</ul>
+<p>What follows is an overview of the steps I took to get up and running in haskell on osx 10.10.</p>
+<h1 id="1-install-the-xcode-command-line-tools">1. Install the xcode command line tools</h1>
+<p>Everything (including ghc) seems to depend on these.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1"></a><span class="ex">xcode-select</span> --install</span></code></pre></div>
+<h1 id="2-install-brew">2. Install Brew</h1>
+<p>This is quick and easy, following the instructions on the <a href="http://brew.sh">brew homepage</a>.</p>
+<h1 id="3-install-ghcformacosx">3. Install ghcformacosx</h1>
+<p><a href="https://ghcformacosx.github.io">"ghcformacosx"</a> is a "drag and drop" installation of ghc 7.8.4 and cabal 1.22.0.0. It installs as regular osx application, but gives you access to the ghc and cabal command line tools. A nice feature is that if you run the application, it tells you what you need to do to set your environment up correctly, and shows a dashboard indicating whether you have done so:</p>
+<p><img src="2015-02-25-ghc-yosemite/ghcformacosx.png" /></p>
+<p>Once this is done you need to bring the local package database up to date:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1"></a><span class="ex">cabal</span> update</span></code></pre></div>
+<h1 id="4-use-brew-to-install-some-key-tools-and-libraries">4. Use brew to install some key tools and libraries</h1>
+<p>One of my libraries has <a href="https://hackage.haskell.org/package/pcre-light">pcre-light</a> as a transitive dependency. It needs a corresponding c library. Also cairo is the fastest rendering backend for my <a href="http://hackage.haskell.org/package/Chart">haskell charting library</a>, and gtk is necessary if you want to show charts in windows. Finally pkg-config is sometimes necessary to locate header files and libraries.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1"></a><span class="ex">brew</span> install pkg-config</span>
+<span id="cb4-2"><a href="#cb4-2"></a><span class="ex">brew</span> install pcre</span>
+<span id="cb4-3"><a href="#cb4-3"></a></span>
+<span id="cb4-4"><a href="#cb4-4"></a><span class="co"># gtk and cairo need xquartz</span></span>
+<span id="cb4-5"><a href="#cb4-5"></a><span class="ex">brew</span> tap Caskroom/cask</span>
+<span id="cb4-6"><a href="#cb4-6"></a><span class="ex">brew</span> install Caskroom/cask/xquartz</span>
+<span id="cb4-7"><a href="#cb4-7"></a></span>
+<span id="cb4-8"><a href="#cb4-8"></a><span class="co"># later steps in the build processes need to find libraries</span></span>
+<span id="cb4-9"><a href="#cb4-9"></a><span class="co"># like xcb-shm via package config. Tell pkg-config</span></span>
+<span id="cb4-10"><a href="#cb4-10"></a><span class="co"># where they are.</span></span>
+<span id="cb4-11"><a href="#cb4-11"></a><span class="bu">export</span> <span class="va">PKG_CONFIG_PATH=</span>/opt/X11/lib/pkgconfig</span>
+<span id="cb4-12"><a href="#cb4-12"></a></span>
+<span id="cb4-13"><a href="#cb4-13"></a><span class="ex">brew</span> install cairo</span>
+<span id="cb4-14"><a href="#cb4-14"></a><span class="ex">brew</span> install gtk</span></code></pre></div>
+<p>A nice feature of brew is that whilst it installs libraries and headers to versioned directories in /usr/local/Cellar, it symlinks these back into the expected locations in /usr/local. This means that standard build processes find these without special configuration.</p>
+<h1 id="5-setup-some-favorite-command-line-tools">5. Setup some favorite command line tools</h1>
+<p>I use <a href="http://johnmacfarlane.net/pandoc/">pandoc</a> and <a href="https://hackage.haskell.org/package/ghc-mod">ghc-mod</a> alot, and still need <a href="http://darcs.net">darcs</a> sometimes. Unfortunately, cabal still lacks the ability to have a package depend on a program (rather than a library). Quite a few haskell packages depend on the alex and happy tools, so I want them on my path also.</p>
+<p>I'm not sure it's idiomatic on osx, but I continue my linux habit of putting personal command line tools in ~/bin. I like to build all of these tools in a single cabal sandbox, and then link them into ~/bin. Hence, assuming ~/bin is on my path:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1"></a><span class="bu">cd</span> ~/bin</span>
+<span id="cb5-2"><a href="#cb5-2"></a><span class="fu">mkdir</span> hackage</span>
+<span id="cb5-3"><a href="#cb5-3"></a><span class="kw">(</span><span class="bu">cd</span> hackage <span class="kw">&amp;&amp;</span> <span class="ex">cabal</span> sandbox init<span class="kw">)</span></span>
+<span id="cb5-4"><a href="#cb5-4"></a><span class="kw">(</span><span class="bu">cd</span> hackage <span class="kw">&amp;&amp;</span> <span class="ex">cabal</span> sandbox install alex happy<span class="kw">)</span></span>
+<span id="cb5-5"><a href="#cb5-5"></a><span class="fu">ln</span> -s hackage/.cabal-sandbox/bin/alex</span>
+<span id="cb5-6"><a href="#cb5-6"></a><span class="fu">ln</span> -s hackage/.cabal-sandbox/bin/happy</span>
+<span id="cb5-7"><a href="#cb5-7"></a><span class="kw">(</span><span class="bu">cd</span> hackage <span class="kw">&amp;&amp;</span> <span class="ex">cabal</span> sandbox install pandocc darcs ghc-mod<span class="kw">)</span></span>
+<span id="cb5-8"><a href="#cb5-8"></a><span class="fu">ln</span> -s hackage/.cabal-sandbox/bin/pandoc</span>
+<span id="cb5-9"><a href="#cb5-9"></a><span class="fu">ln</span> -s hackage/.cabal-sandbox/bin/darcs</span>
+<span id="cb5-10"><a href="#cb5-10"></a><span class="fu">ln</span> -s hackage/.cabal-sandbox/bin/ghc-mod</span></code></pre></div>
+<p>(In the sequence above I had to make sure that alex and happy were linked onto the PATH before building ghc-mod)</p>
+<h1 id="6-build-gtk2hs-in-its-own-sandbox">6. Build gtk2hs in its own sandbox</h1>
+<p>The hard work is already done by brew. We can use build gtk2hs following the standard build instructions:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1"></a><span class="bu">export</span> <span class="va">PKG_CONFIG_PATH=</span>/opt/X11/lib/pkgconfig</span>
+<span id="cb6-2"><a href="#cb6-2"></a><span class="bu">export</span> <span class="va">PATH=</span>.cabal-sandbox/bin:<span class="va">$PATH</span></span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="fu">mkdir</span> gtk2hs</span>
+<span id="cb6-4"><a href="#cb6-4"></a><span class="bu">cd</span> gtk2hs</span>
+<span id="cb6-5"><a href="#cb6-5"></a><span class="ex">cabal</span> sandbox init</span>
+<span id="cb6-6"><a href="#cb6-6"></a><span class="ex">cabal</span> install gtk2hs-buildtools</span>
+<span id="cb6-7"><a href="#cb6-7"></a><span class="ex">cabal</span> install gtk</span></code></pre></div>
+<p>Note how we need to ensure that the sandbox is on the path, so that the command line tools built in the first call to <code>cabal install</code> can be found in the second.</p>
+<h1 id="summary">Summary</h1>
+<p>All in all, this process was much smoother than before. Both ghcformacosx and brew are excellent pieces of work - kudos to their developers. ghc is, of course, as awesome as ever. When used with sandboxes cabal works well (despite the "cabal hell" reputation). However, having to manually resolve dependencies on build tools is tedious, I'd really like to see <a href="https://github.com/haskell/cabal/issues/220">this cabal issue</a> resolved.</p>
+<h2 id="update-2015-03-01">Update [2015-03-01]</h2>
+<p>One issue cropped up after this post. It turns out that ghc-mod has some <a href="https://github.com/kazu-yamamoto/ghc-mod/wiki/InconsistentCabalVersions">constraints on the combinations of ghc and cabal versions</a>, and unfortunately the combination provided in <a href="https://ghcformacosx.github.io">ghcformacosx</a> is not supported. I worked around this by installing a older version of cabal in ~/bin:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1"></a><span class="bu">cd</span> ~/bin/hackage</span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="ex">cabal</span> install --constraint <span class="st">&quot;Cabal &lt; 1.22&quot;</span> cabal-install</span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="bu">cd</span> ~/bin</span>
+<span id="cb7-4"><a href="#cb7-4"></a><span class="fu">ln</span> -s hackage/.cabal-sandbox/bin/cabal</span></code></pre></div>
+
+        <br>
+        <br>
+
+        <!--Share buttons-->
+        <div class="social-buttons">
+            <a href="https://twitter.com/share" class="twitter-share-button"
+                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: Haskell on Yosemite (OSX 10.10) - " data-via="null">Tweet</a>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
+        </div>
+</article>
+
+</div>
+
+<footer>
+    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+</footer>
+
+<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
+<script src="/js/main.js"></script>
+</body>
+</html>
