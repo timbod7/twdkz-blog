@@ -9,52 +9,30 @@
     <title>{{title}}</title>
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/syntax.css">
 </head>
 <body>
     {{>site/templates/header.html}}
 
 <div id="page">
-    <div class="wrapper">
-        <div class="masthead">
-            <span class="title">
-                {{title}}
-            </span>
-            <br>
-
-            {{#image}}
-            <img class="post-image" src="/images/{{image}}">
-            {{/image}}
-            <br>
-            {{#author}}
-            <span class="byline">by {{author}}</span>
-            {{/author}}
-            <br>
-            <span class="date">{{date}}</span>
-            <br>
-            <div class="metadata">
-            </div>
-        </div>
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              {{title}}
+          </span>
+          <br>
+          {{#author}}
+          <span class="byline">{{author}}</span>
+          {{/author}}
+          <br>
+          <span class="date">{{date}}</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          {{{content}}}
+      </article>
     </div>
-    <article class="post">
-        {{{content}}}
-
-        <br>
-        <br>
-
-        <!--Share buttons-->
-        <div class="social-buttons">
-            <a href="https://twitter.com/share" class="twitter-share-button"
-                                                data-url="{{baseUrl}}{{#stripExt}}{{url}}{{/stripExt}}" data-text="Check out: {{title}} - " data-via="{{twitterHandle}}">Tweet</a>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            {{#twitterHandle}}
-            <a href="https://twitter.com/{{twitterHandle}}" class="twitter-follow-button" data-show-count="false" data-dnt="true">Follow @{{twitterHandle}}</a>
-            {{/twitterHandle}}
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <div class="fb-like" data-href="{{siteUrl}}{{#stripExt}}{{url}}{{/stripExt}}" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
-        </div>
-</article>
-
 </div>
 
 {{>site/templates/footer.html}}

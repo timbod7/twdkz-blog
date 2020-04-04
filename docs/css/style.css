@@ -1,5 +1,5 @@
 /* CSS Reset */
-html, body, div, span, object, h1, h2, h3, h4, h5, h6, p, a, abbr, acronym, em, img, ol, ul, li {
+html, body, div, span, object, h1, h2, h3, h4, h5, h6, p, a, abbr, acronym, em, img, ol, ul, li, header {
   border: 0;
   font-weight: inherit;
   font-style: inherit;
@@ -10,8 +10,218 @@ html, body, div, span, object, h1, h2, h3, h4, h5, h6, p, a, abbr, acronym, em, 
   padding: 0;
 }
 
-html {
-  font-family: 'Linux Libertine';
-  color: #333;
-  background: #FFFFFC;
-};
+:root {
+  --page-margin: 20px;
+  --page-max-width: 820px;
+}
+
+html{
+    box-sizing:border-box;
+    height:100%;
+    background-color:#fff;
+    font:400 20px/1.5 "Linux Libertine",serif;
+    color:#333
+}
+
+body,h1,h2,h3,h4,h5,h6,p,blockquote,pre,hr,dl,dd,ol,ul,figure{
+    margin:0;
+    padding:0
+}
+
+body{
+    height:100%;
+    min-height:100%
+}
+
+@media screen and (max-width: 800px){
+    html{
+        font-size:18px
+    }
+}
+
+@media screen and (max-width: 600px){
+    html{
+        font-size:17px
+    }
+}
+
+blockquote,pre,ul,ol,dl,figure{
+    margin-bottom:1rem
+}
+p{
+    margin-bottom:1rem
+}
+img{
+    max-width:100%;
+    vertical-align:middle;
+    margin:1em 0
+}
+figure>img{
+    display:block
+}
+figcaption{
+    font-size:90%
+}
+ul,ol{
+    margin-left:2rem
+}
+li>ul,li>ol{
+    margin-bottom:0
+}
+h1,h2,h3,h4,h5,h6{
+    line-height:inherit;
+    margin:1.5em 0 .75em;
+    font-weight:600
+}
+h2{
+    font-size:150%
+}
+h3{
+    font-size:120%
+}
+h4,h5,h6{
+    font-size:95%;
+    text-transform:uppercase
+}
+
+a{
+    color:#1822c0;
+    text-decoration: none;
+}
+a:hover{
+    text-decoration: underline;
+}
+
+blockquote{
+    color:#aaa;
+    border-left:5px solid #f0f0f0;
+    padding-left:1rem;
+    font-size:125%;
+    font-style:italic;
+    margin:1.25em 0
+}
+blockquote>:last-child{
+    margin-bottom:0
+}
+blockquote cite:before{
+    content:"\2014 "
+}
+strong{
+    font-weight:600
+}
+pre,code{
+    font-family:"Iosevka Terminal","Ubuntu Mono",monospace;
+    font-size:0.85rem;
+    line-height:1.4;
+    background-color:#eee;
+    padding: 5px;
+}
+pre{
+    overflow-x:auto
+}
+table{
+    border-spacing:0;
+    border-collapse:separate
+}
+table th{
+    border-bottom:1px solid #333
+}
+table th,table td{
+    padding:.25rem
+}
+hr{
+    margin:1.5rem 0 2.4em;
+    line-height:0;
+    border-style:none none dotted;
+    color:#fff;
+    background-color:#fff
+}
+hr:after{
+    display:block;
+    content:'...';
+    color:#333;
+    text-align:center;
+    font-size:200%;
+    font-family:"Iosevka Terminal","Ubuntu Mono",monospace
+}
+
+body {
+    position:relative;
+    min-width:300px;
+    min-height:360px
+}
+
+#header {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+#header a {
+    color:black;
+    text-decoration: none;
+}
+#header a:hover {
+    text-decoration: underline;
+}
+
+.header-content {
+  left-margin: var(--page-margin);
+  right-margin: var(--page-margin);
+  max-width: var(--page-max-width);
+  width: 100%;
+  justify-content: center;
+  border-bottom: 1px solid black;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+
+#page {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.page-content {
+  margin: var(--page-margin);
+  max-width: var(--page-max-width);
+}
+
+.masthead {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.title {
+  font-size:150%;
+  font-weight: bold;
+}
+
+#footer {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+#footer a {
+    color:black;
+    text-decoration: none;
+}
+
+#footer a:hover {
+    text-decoration: underline;
+}
+
+.footer-content {
+  margin: var(--page-margin);
+  max-width: var(--page-max-width);
+  width: 100%;
+  border-top: 1px solid black;
+}
+
+.date {
+  left-margin: 20px;
+}

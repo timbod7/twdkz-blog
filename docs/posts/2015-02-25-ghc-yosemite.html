@@ -11,44 +11,38 @@
         <title>Haskell on Yosemite (OSX 10.10)</title>
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/syntax.css">
 </head>
 <body>
-    <header>
+    <header id="header">
+      <div class="header-content">
         <nav>
-            <a id="beacon" href="/">
-                <div id="home-text"> HOME </div>
-            </a>
+            <a href="/"><div >Home</div></a>
         </nav>
     
         <div class="right-sidebar">
             <a class="ext-link" href="https://github.com/timbod7">
-            <img src="/images/github-logo.png" alt="Github Profile"/>
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
         </a>
-
-        <div id="theme-button">DAY</div>
-        </div>
+    </div>
+      </div>
     </header>
 
 <div id="page">
-    <div class="wrapper">
-        <div class="masthead">
-            <span class="title">
-                Haskell on Yosemite (OSX 10.10)
-            </span>
-            <br>
-
-            <br>
-            <span class="byline">by Tim Docker</span>
-            <br>
-            <span class="date">2015-02-25</span>
-            <br>
-            <div class="metadata">
-            </div>
-        </div>
-    </div>
-    <article class="post">
-        <h1 id="update-2016-05-16">Update (2016-05-16)</h1>
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Haskell on Yosemite (OSX 10.10)
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2015-02-25</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <h1 id="update-2016-05-16">Update (2016-05-16)</h1>
 <p>Most of the information below is now out of date. The <a href="http://docs.haskellstack.org/en/stable/README/">stack</a> build tool has made everything <em>much</em> simpler. Getting started just a case of installing with</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1"></a><span class="ex">brew</span> install haskell-stack</span></code></pre></div>
 <p>... and then leaving the management of ghc installations up to stack.</p>
@@ -127,28 +121,14 @@
 <span id="cb7-2"><a href="#cb7-2"></a><span class="ex">cabal</span> install --constraint <span class="st">&quot;Cabal &lt; 1.22&quot;</span> cabal-install</span>
 <span id="cb7-3"><a href="#cb7-3"></a><span class="bu">cd</span> ~/bin</span>
 <span id="cb7-4"><a href="#cb7-4"></a><span class="fu">ln</span> -s hackage/.cabal-sandbox/bin/cabal</span></code></pre></div>
-
-        <br>
-        <br>
-
-        <!--Share buttons-->
-        <div class="social-buttons">
-            <a href="https://twitter.com/share" class="twitter-share-button"
-                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: Haskell on Yosemite (OSX 10.10) - " data-via="null">Tweet</a>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
-        </div>
-</article>
-
+      </article>
+    </div>
 </div>
 
-<footer>
-    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+<footer id="footer">
+  <div class="footer-content"></div>
 </footer>
 
-<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
-<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
 <script src="/js/main.js"></script>
 </body>
 </html>

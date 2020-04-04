@@ -11,44 +11,38 @@
         <title>A new charting API</title>
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/syntax.css">
 </head>
 <body>
-    <header>
+    <header id="header">
+      <div class="header-content">
         <nav>
-            <a id="beacon" href="/">
-                <div id="home-text"> HOME </div>
-            </a>
+            <a href="/"><div >Home</div></a>
         </nav>
     
         <div class="right-sidebar">
             <a class="ext-link" href="https://github.com/timbod7">
-            <img src="/images/github-logo.png" alt="Github Profile"/>
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
         </a>
-
-        <div id="theme-button">DAY</div>
-        </div>
+    </div>
+      </div>
     </header>
 
 <div id="page">
-    <div class="wrapper">
-        <div class="masthead">
-            <span class="title">
-                A new charting API
-            </span>
-            <br>
-
-            <br>
-            <span class="byline">by Tim Docker</span>
-            <br>
-            <span class="date">2014-09-06</span>
-            <br>
-            <div class="metadata">
-            </div>
-        </div>
-    </div>
-    <article class="post">
-        <p>One of the challenges with building a library like <a href="https://github.com/timbod7/haskell-chart">Chart</a> is the tension between ease of use and flexibility. Users want to produce charts with a minimum of code up front, but later want to refine the details. The chart library addresses this through the use of "defaulted records" using <a href="https://hackage.haskell.org/package/data-default-class-0.0.1/docs/Data-Default-Class.html">Data.Default.Class</a>. Because such records are often nested, we rely on the somewhat intimidating <a href="https://hackage.haskell.org/package/lens-1.2">lens</a> library to modify the default values. We end up with code to create chart elements like this:</p>
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              A new charting API
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2014-09-06</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>One of the challenges with building a library like <a href="https://github.com/timbod7/haskell-chart">Chart</a> is the tension between ease of use and flexibility. Users want to produce charts with a minimum of code up front, but later want to refine the details. The chart library addresses this through the use of "defaulted records" using <a href="https://hackage.haskell.org/package/data-default-class-0.0.1/docs/Data-Default-Class.html">Data.Default.Class</a>. Because such records are often nested, we rely on the somewhat intimidating <a href="https://hackage.haskell.org/package/lens-1.2">lens</a> library to modify the default values. We end up with code to create chart elements like this:</p>
 <pre><code>sinusoid2 = plot_points_title .~ &quot;fn(x)&quot;
           $ plot_points_values .~ mydata
           $ plot_points_style . point_color .~ opaque red
@@ -76,28 +70,14 @@ mydata = ...
 main = toFile def &quot;test.png&quot; $ plot $ points &quot;lines&quot; mydata</code></pre>
 <p>But this extends naturally to more complex charts. The code differences between the new stateful API versus the existing API can been seen in <a href="https://github.com/timbod7/haskell-chart/wiki/example-2">this example</a>.</p>
 <p>The stateful API is available in <a href="https://hackage.haskell.org/package/Chart">chart v1.3</a> It is a thin layer over the existing API - both will be continue to be available in the future.</p>
-
-        <br>
-        <br>
-
-        <!--Share buttons-->
-        <div class="social-buttons">
-            <a href="https://twitter.com/share" class="twitter-share-button"
-                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: A new charting API - " data-via="null">Tweet</a>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
-        </div>
-</article>
-
+      </article>
+    </div>
 </div>
 
-<footer>
-    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+<footer id="footer">
+  <div class="footer-content"></div>
 </footer>
 
-<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
-<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
 <script src="/js/main.js"></script>
 </body>
 </html>

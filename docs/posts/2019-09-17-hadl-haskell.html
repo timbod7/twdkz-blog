@@ -11,44 +11,38 @@
         <title>Using ADL from haskell</title>
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/syntax.css">
 </head>
 <body>
-    <header>
+    <header id="header">
+      <div class="header-content">
         <nav>
-            <a id="beacon" href="/">
-                <div id="home-text"> HOME </div>
-            </a>
+            <a href="/"><div >Home</div></a>
         </nav>
     
         <div class="right-sidebar">
             <a class="ext-link" href="https://github.com/timbod7">
-            <img src="/images/github-logo.png" alt="Github Profile"/>
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
         </a>
-
-        <div id="theme-button">DAY</div>
-        </div>
+    </div>
+      </div>
     </header>
 
 <div id="page">
-    <div class="wrapper">
-        <div class="masthead">
-            <span class="title">
-                Using ADL from haskell
-            </span>
-            <br>
-
-            <br>
-            <span class="byline">by Tim Docker</span>
-            <br>
-            <span class="date">2019-09-17</span>
-            <br>
-            <div class="metadata">
-            </div>
-        </div>
-    </div>
-    <article class="post">
-        <p>The <a href="https://github.com/timbod7/adl">ADL</a> system has proven valuable at <a href="https://www.helixta.com.au/">Helix</a>. We use it in most of our projects, as a strongly typed schema language for specifying:</p>
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Using ADL from haskell
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2019-09-17</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>The <a href="https://github.com/timbod7/adl">ADL</a> system has proven valuable at <a href="https://www.helixta.com.au/">Helix</a>. We use it in most of our projects, as a strongly typed schema language for specifying:</p>
 <ul>
 <li>http apis (in lieu of <a href="https://swagger.io/specification/">openapi/swagger</a>)</li>
 <li>database schemas (in lieu of sql)</li>
@@ -193,28 +187,14 @@ protocol:
 expected field certificateKey at protocol.https</code></pre>
 <p>Hopefully this post has given a simple but useful demonstration of ADL usage from haskell. It's really only a starting point - the ADL system's value increases dramatically when used to ensure consist types between systems written in multiple languages.</p>
 <p>The complete code for this demonstration, include build and dependency configuration can be found in its <a href="https://github.com/timbod7/adl-demo-hs">github repo</a>.</p>
-
-        <br>
-        <br>
-
-        <!--Share buttons-->
-        <div class="social-buttons">
-            <a href="https://twitter.com/share" class="twitter-share-button"
-                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: Using ADL from haskell - " data-via="null">Tweet</a>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
-        </div>
-</article>
-
+      </article>
+    </div>
 </div>
 
-<footer>
-    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+<footer id="footer">
+  <div class="footer-content"></div>
 </footer>
 
-<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
-<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
 <script src="/js/main.js"></script>
 </body>
 </html>

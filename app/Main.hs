@@ -9,6 +9,7 @@ import           Control.Lens
 import           Control.Monad
 import           Data.Aeson                 as A
 import           Data.Aeson.Lens
+import           Data.List(sortOn)
 import           Development.Shake
 import           Development.Shake.Classes
 import           Development.Shake.Forward
@@ -71,7 +72,8 @@ data Post =
 buildIndex :: [Post] -> Action ()
 buildIndex posts' = do
   indexT <- compileTemplate' "site/templates/index.html"
-  let indexInfo = IndexInfo {posts = posts'}
+  let sortedPosts = reverse (sortOn date posts')
+      indexInfo = IndexInfo {posts = sortedPosts}
       indexHTML = T.unpack $ substitute indexT (withSiteMeta $ toJSON indexInfo)
   writeFile' (outputFolder </> "index.html") indexHTML
 
@@ -100,9 +102,11 @@ buildPost srcPath = cacheAction ("build" :: T.Text, srcPath) $ do
       postdir = dropDirectory1 datadir
   -- Copy static files from the per-post direcory
   -- (Same name as the most, without the .md ext)
-  staticpaths <- getDirectoryFiles datadir ["*"]
-  void $ forP staticpaths $ \filepath ->
-     copyFileChanged (datadir </> filepath) (outputFolder </> postdir </> filepath)
+  hasStatic <- doesDirectoryExist datadir
+  when hasStatic $ do
+    staticpaths <- getDirectoryFiles datadir ["*"]
+    void $ forP staticpaths $ \filepath ->
+       copyFileChanged (datadir </> filepath) (outputFolder </> postdir </> filepath)
   return post
 
 -- | Copy all static files from the listed folders to their destination

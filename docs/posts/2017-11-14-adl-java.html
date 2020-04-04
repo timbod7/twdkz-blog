@@ -11,44 +11,38 @@
         <title>Algebraic Data Types in Java</title>
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/syntax.css">
 </head>
 <body>
-    <header>
+    <header id="header">
+      <div class="header-content">
         <nav>
-            <a id="beacon" href="/">
-                <div id="home-text"> HOME </div>
-            </a>
+            <a href="/"><div >Home</div></a>
         </nav>
     
         <div class="right-sidebar">
             <a class="ext-link" href="https://github.com/timbod7">
-            <img src="/images/github-logo.png" alt="Github Profile"/>
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
         </a>
-
-        <div id="theme-button">DAY</div>
-        </div>
+    </div>
+      </div>
     </header>
 
 <div id="page">
-    <div class="wrapper">
-        <div class="masthead">
-            <span class="title">
-                Algebraic Data Types in Java
-            </span>
-            <br>
-
-            <br>
-            <span class="byline">by Tim Docker</span>
-            <br>
-            <span class="date">2017-11-14</span>
-            <br>
-            <div class="metadata">
-            </div>
-        </div>
-    </div>
-    <article class="post">
-        <p>At <a href="http://www.helixta.com.au/">Helix</a> we often code backend services in java. I find modern java <em>acceptable</em> as a language for getting things done. As a long time haskell developer, however, I find java's facilities for data types frustrating indeed. These frustrations are twofold. Java lacks support for algebraic data types (<a href="https://en.wikipedia.org/wiki/Algebraic_data_type">ADTs</a>), and requires large amounts of boilerplate to define even simple types.</p>
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Algebraic Data Types in Java
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2017-11-14</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>At <a href="http://www.helixta.com.au/">Helix</a> we often code backend services in java. I find modern java <em>acceptable</em> as a language for getting things done. As a long time haskell developer, however, I find java's facilities for data types frustrating indeed. These frustrations are twofold. Java lacks support for algebraic data types (<a href="https://en.wikipedia.org/wiki/Algebraic_data_type">ADTs</a>), and requires large amounts of boilerplate to define even simple types.</p>
 <p>When designing systems, I place great value in applying the "make illegal states unrepresentable" principle[^1]. Using ADTs to more accurately model data is a excellent step in this direction. However, it's a burden to do in languages like java that lack support for <a href="https://en.wikipedia.org/wiki/Tagged_union">sum types</a>.</p>
 <p>Even for regular product types (ie records of fields) java can be tedious. Defining a record of a few fields should really only take a corresponding few lines of code. Yet for a useful value type in java one will generally need to write: constructors, accessors, a comparison function, a hash implementation, serialisation logic etc. It's common in the java world to use IDEs to automatically generate this kind of boilerplate, but subtle bugs can creep in over time as the once generated code isn't manually updated to reflect subsequent changes in the data model.</p>
 <p>Hence, at Helix we now often use my <a href="https://github.com/timbod7/adl">ADL language</a> to define data types, and generate the corresponding java code from them. As a tiny example, these adl definitions (see complete file <a href="https://github.com/timbod7/adl/blob/master/haskell/compiler/tests/demo1/input/picture.adl">here</a>):</p>
@@ -67,28 +61,14 @@
     };</code></pre>
 <p>result in the corresponding <a href="https://github.com/timbod7/adl/blob/master/haskell/compiler/tests/demo1/java-output/adl/picture/Rectangle.java">Rectangle.java</a> and <a href="https://github.com/timbod7/adl/blob/master/haskell/compiler/tests/demo1/java-output/adl/picture/Translated.java">Picture.java</a>. These two definitions alone correspond to 280 lines of java code (that you really don't want to write and maintain). As can be seen in the <code>Translated&lt;&gt;</code> type, <a href="https://en.wikipedia.org/wiki/Parametric_polymorphism">parametric polymorphism</a> is supported.</p>
 <p>I find that being able to define data types concisely encourages me to build more accurate data models, resulting in systems that are more robust and better reflect the problem domain. And ADL's multi language support (<a href="https://github.com/timbod7/adl/blob/master/doc/backend-java.md">java</a>, <a href="https://github.com/timbod7/adl/blob/master/doc/backend-haskell.md">haskell</a>, <a href="https://github.com/timbod7/adl/blob/master/doc/backend-typescript.md">typescript</a>) allows us to easily serialize and transfer the corresponding data values between our java services, and our typescript web and mobile UIs.</p>
-
-        <br>
-        <br>
-
-        <!--Share buttons-->
-        <div class="social-buttons">
-            <a href="https://twitter.com/share" class="twitter-share-button"
-                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: Algebraic Data Types in Java - " data-via="null">Tweet</a>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
-        </div>
-</article>
-
+      </article>
+    </div>
 </div>
 
-<footer>
-    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+<footer id="footer">
+  <div class="footer-content"></div>
 </footer>
 
-<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
-<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
 <script src="/js/main.js"></script>
 </body>
 </html>

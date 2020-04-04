@@ -11,69 +11,49 @@
         <title>An executable specification for voteflux</title>
     <link rel="stylesheet" href="/css/fonts.css">
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/syntax.css">
 </head>
 <body>
-    <header>
+    <header id="header">
+      <div class="header-content">
         <nav>
-            <a id="beacon" href="/">
-                <div id="home-text"> HOME </div>
-            </a>
+            <a href="/"><div >Home</div></a>
         </nav>
     
         <div class="right-sidebar">
             <a class="ext-link" href="https://github.com/timbod7">
-            <img src="/images/github-logo.png" alt="Github Profile"/>
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
         </a>
-
-        <div id="theme-button">DAY</div>
-        </div>
+    </div>
+      </div>
     </header>
 
 <div id="page">
-    <div class="wrapper">
-        <div class="masthead">
-            <span class="title">
-                An executable specification for voteflux
-            </span>
-            <br>
-
-            <br>
-            <span class="byline">by Tim Docker</span>
-            <br>
-            <span class="date">2016-05-16</span>
-            <br>
-            <div class="metadata">
-            </div>
-        </div>
-    </div>
-    <article class="post">
-        <p><a href="https://voteflux.org/">voteflux</a> is an interesting new political party, that will field senate candidates at the Australian federal election in July. It's sole policy is to implement <a href="https://en.wikipedia.org/wiki/Delegative_democracy">delegative democracy</a>, and to do this within the existing Australian political system. It intends to use blockchain technology to provide cryptographic guarantees to the voting process.</p>
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              An executable specification for voteflux
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2016-05-16</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p><a href="https://voteflux.org/">voteflux</a> is an interesting new political party, that will field senate candidates at the Australian federal election in July. It's sole policy is to implement <a href="https://en.wikipedia.org/wiki/Delegative_democracy">delegative democracy</a>, and to do this within the existing Australian political system. It intends to use blockchain technology to provide cryptographic guarantees to the voting process.</p>
 <p>At the time of writing the voteflux software is incomplete, and there is not yet a rigorous specification for how the voting system will work. The voteflux website explains the system at a high level, but leaves questions unanswered. Discussions in the group's slack forums fill in some details, and the parties founders have answered some questions of my own.</p>
 <p>In an effort to improve my own understanding of the voteflux ideas, and provide a basis for discussion with others, I've attempted to write an <a href="https://github.com/timbod7/flux-model">executable specification</a> for the system in Haskell. All of the key logic is in <a href="https://github.com/timbod7/flux-model/blob/master/src/Flux.hs">Flux.hs</a>. This was a worthwhile exercise - having to write concrete types and corresponding code made me consider many questions which weren't apparent when thinking less rigourously. Going forward, I intend to build some simulations based upon this code.</p>
 <p>Note that this code has no endorsement from the voteflux party - it represents my own efforts to understand the proposed system. But I like their plans, and hope they do well in the election.</p>
-
-        <br>
-        <br>
-
-        <!--Share buttons-->
-        <div class="social-buttons">
-            <a href="https://twitter.com/share" class="twitter-share-button"
-                                                data-url="https://twdkz.blogs.dockerz.net" data-text="Check out: An executable specification for voteflux - " data-via="null">Tweet</a>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
-            <div class="fb-like" data-href="" data-layout="button" data-action="like" data-show-faces="true" data-share="true"></div>
-        </div>
-</article>
-
+      </article>
+    </div>
 </div>
 
-<footer>
-    Built with Haskell using <a href="https://github.com/ChrisPenner/slick">slick</a> ❤️
+<footer id="footer">
+  <div class="footer-content"></div>
 </footer>
 
-<link href='https://fonts.googleapis.com/css?family=Quicksand:300,400' rel='stylesheet' type='text/css'>
-<link href='https://fonts.googleapis.com/css?family=Oswald' rel='stylesheet' type='text/css'>
 <script src="/js/main.js"></script>
 </body>
 </html>
