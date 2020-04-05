@@ -2,7 +2,7 @@
 title: Composable Value Editors
 author: Tim Docker
 date: 2012-05-10
-tags: [haskell]
+tags: [programming]
 ---
 Graphical User Interfaces (GUIs) in haskell are frustrating. It's not
 yet clear what is the cleanest model for fitting GUIs into functional

@@ -2,7 +2,7 @@
 title: Accessing the cabal version from an application
 author: Tim Docker
 date: 2011-11-21
-tags: [haskell]
+tags: [programming]
 ---
 I wanted the --version flag in an application to return the version from
 the cabal file. Unable to find solution for this on the net, I ventured

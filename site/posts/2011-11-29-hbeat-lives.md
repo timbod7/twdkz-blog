@@ -2,7 +2,7 @@
 title: HBeat Lives
 author: Tim Docker
 date: 2011-11-29
-tags: [haskell]
+tags: [programming]
 ---
 Reorganising my projects home, I copied in the old documentation for my
 [hbeat](http://dockerz.net/twd/hBeat) program. The docs needed some

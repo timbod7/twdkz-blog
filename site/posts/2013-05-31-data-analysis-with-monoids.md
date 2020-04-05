@@ -2,7 +2,7 @@
 title: Data analysis with Monoids
 author: Tim Docker
 date: 2013-05-31
-tags: [haskell]
+tags: [programming]
 ---
 This post expresses the key ideas of a talk I gave at FP-SYD this week.
 

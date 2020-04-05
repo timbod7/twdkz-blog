@@ -2,7 +2,7 @@
 title: "An executable specification for voteflux"
 author: Tim Docker
 date: 2016-05-16
-tags: [haskell]
+tags: [programming]
 ---
 [voteflux][1] is an interesting new political party, that will field
 senate candidates at the Australian federal election in July. It's

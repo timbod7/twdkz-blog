@@ -2,7 +2,7 @@
 title: "Using ADL from haskell"
 author: Tim Docker
 date: 2019-09-17
-tags: [haskell,adl]
+tags: [programming]
 description: The basic of using ADL from haskell
 ---
 The [ADL][adl] system has proven valuable at [Helix][helix]. We use it in most of our

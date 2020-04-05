@@ -2,7 +2,7 @@
 title: "Cabal version consistency"
 author: Tim Docker
 date: 2013-11-04
-tags: [haskell]
+tags: [programming]
 ---
 Thanks to some great work done over the google summer of code, the
 [chart library](https://github.com/timbod7/haskell-chart/wiki) has

@@ -2,7 +2,7 @@
 title: Composable Value Editor code
 author: Tim Docker
 date: 2012-09-16
-tags: [haskell]
+tags: [programming]
 ---
 I've made the code for this library (previously [described
 here](2012-05-10-composable-value-editors.html))

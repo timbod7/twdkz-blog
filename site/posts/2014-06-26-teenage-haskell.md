@@ -2,7 +2,7 @@
 title: "Teenage haskell"
 author: Tim Docker
 date: 2014-06-26
-tags: [haskell]
+tags: [programming]
 ---
 I've been inspired by the efforts of others ([Chris Smith][1],
 [Manuel Chakravarty][2]) to try teaching children haskell as a first

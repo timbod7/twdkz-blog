@@ -10,6 +10,7 @@ import           Control.Lens
 import           Control.Monad
 import           Data.Aeson                 as A
 import           Data.Aeson.Lens
+import           Data.Foldable(for_)
 import           Data.List(sortOn)
 import           Data.Time
 import           Development.Shake
@@ -21,6 +22,7 @@ import           Slick
 
 import qualified Data.HashMap.Lazy as HML
 import qualified Data.Text                  as T
+import qualified Data.Map                   as M
 
 ---Config-----------------------------------------------------------------------
 
@@ -67,6 +69,7 @@ data Post =
          , url     :: String
          , date    :: String
          , image   :: Maybe String
+         , tags    :: [String]
          }
     deriving (Generic, Eq, Ord, Show, FromJSON, ToJSON, Binary)
 
@@ -162,6 +165,9 @@ buildRules :: Action ()
 buildRules = do
   allPosts <- buildPosts
   buildIndex allPosts
+  let postsByTag = M.fromListWith (<>) (concat [[(tag,[p]) | tag <- tags p] | p <- allPosts])
+  for_ (M.toList postsByTag) $ \(tag,posts) -> do
+    buildFeed posts (outputFolder </> "atom" </> (tag <> ".xml"))
   buildFeed allPosts (outputFolder </> "atom/all.xml")
   copyStaticFiles
 

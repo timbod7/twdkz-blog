@@ -2,7 +2,7 @@
 title: "Haskell on Yosemite (OSX 10.10)"
 author: Tim Docker
 date: 2015-02-25
-tags: [haskell]
+tags: [programming]
 ---
 # Update (2016-05-16)
 
