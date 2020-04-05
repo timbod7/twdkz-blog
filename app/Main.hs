@@ -115,7 +115,7 @@ buildFeed posts toFilePath = do
           , atomAuthor = "Tim Docker"
           , atomPosts = posts
           , atomCurrentTime = toIsoDate now
-          , atomUrl = "/atom.xml"
+          , atomUrl = "/atom/" <> takeFileName toFilePath
           }
   atomTempl <- compileTemplate' "site/templates/atom.xml"
   writeFile' toFilePath . T.unpack $ substitute atomTempl (toJSON atomData)
@@ -123,7 +123,7 @@ buildFeed posts toFilePath = do
 -- | Find and build all posts
 buildPosts :: Action [Post]
 buildPosts = do
-  pPaths <- getDirectoryFiles "." ["site/posts//*.md"]
+  pPaths <- getDirectoryFiles "." ["site/posts/*.md"]
   forP pPaths buildPost
 
 -- | Load a post, process metadata, write it to output, then return the post object
@@ -135,7 +135,7 @@ buildPost srcPath = cacheAction ("build" :: T.Text, srcPath) $ do
   -- load post content and metadata as JSON blob
   postData <- markdownToHTML . T.pack $ postContent
   let postUrl = T.pack . dropDirectory1 $ srcPath -<.> "html"
-      withPostUrl = _Object . at "url" ?~ String postUrl
+      withPostUrl = _Object . at "url" ?~ String ("/" <> postUrl)
   -- Add additional metadata we've been able to compute
   let fullPostData = withSiteMeta . withPostUrl $ postData
   template <- compileTemplate' "site/templates/post.html"
