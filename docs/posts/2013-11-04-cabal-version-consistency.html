@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Cabal version consistency">
+    <meta name="twitter:description" content="">
+        <title>Cabal version consistency</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header id="header">
+      <div class="header-content">
+        <nav>
+            <a href="/"><div >Home</div></a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
+        </a>
+    </div>
+      </div>
+    </header>
+
+<div id="page">
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Cabal version consistency
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2013-11-04</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>Thanks to some great work done over the google summer of code, the <a href="https://github.com/timbod7/haskell-chart/wiki">chart library</a> has gained much new functionality over the last 6 months. A consequence of this is that it has gained plenty of dependencies on other software. Furthermore, where the library previously had 2 cabal files to build the system, it now has 4. It's important the the versioning of dependencies is consistent across these cabal files, but manually checking is tedious. As best I could tell there is not yet a tool to facilitate this.</p>
+<p>Hence, I spend a little time learning about the cabal API, and wrote a short script that:</p>
+<ol>
+<li>reads several cabal files specified on the command line</li>
+<li>merges these into one overall set of dependencies</li>
+<li>displays the depencies in such a way that inconsistent version constrains are obvious</li>
+</ol>
+<p>Here's some example output:</p>
+<pre><code>$ runghc ~/repos/merge-cabal-deps/mergeCabalDeps.hs `find . -name &#39;*.cabal&#39;`
+* loaded Chart-gtk-1.1
+* loaded Chart-1.1
+* loaded Chart-tests-1.1
+* loaded Chart-cairo-1.1
+* loaded Chart-diagrams-1.1
+Chart:
+    &gt;=1.1 &amp;&amp; &lt;1.2 (Chart-cairo,Chart-diagrams,Chart-gtk,Chart-tests)
+Chart-cairo:
+    &gt;=1.1 &amp;&amp; &lt;1.2 (Chart-gtk,Chart-tests)
+Chart-diagrams:
+    &gt;=1.1 &amp;&amp; &lt;1.2 (Chart-tests)
+Chart-gtk:
+    &gt;=1.1 &amp;&amp; &lt;1.2 (Chart-tests)
+SVGFonts:
+    &gt;=1.4 &amp;&amp; &lt;1.5 (Chart-diagrams)
+array:
+    -any (Chart,Chart-cairo,Chart-gtk,Chart-tests)
+base:
+    &gt;=3 &amp;&amp; &lt;5 (Chart,Chart-cairo,Chart-diagrams,Chart-gtk,Chart-tests)
+blaze-svg:
+    &gt;=0.3.3 (Chart-diagrams,Chart-tests)
+bytestring:
+    &gt;=0.9 &amp;&amp; &lt;1.0 (Chart-diagrams,Chart-tests)
+cairo:
+    &gt;=0.9.11 (Chart-cairo,Chart-gtk,Chart-tests)
+colour:
+    &gt;=2.2.0 (Chart-diagrams)
+    &gt;=2.2.1 &amp;&amp; &lt;2.4 (Chart,Chart-cairo,Chart-gtk,Chart-tests)
+containers:
+    &gt;=0.4 &amp;&amp; &lt;0.6 (Chart-diagrams,Chart-tests)
+data-default-class:
+    &lt;0.1 (Chart,Chart-cairo,Chart-diagrams,Chart-tests)
+diagrams-cairo:
+    &gt;=0.7 &amp;&amp; &lt;0.8 (Chart-tests)
+diagrams-core:
+    &gt;=0.7 &amp;&amp; &lt;0.8 (Chart-diagrams,Chart-tests)
+diagrams-lib:
+    &gt;=0.7 &amp;&amp; &lt;0.8 (Chart-diagrams,Chart-tests)
+...
+$ </code></pre>
+<p>As should be evident, all of the imported cabal packages are referenced with consistent version constraints except for colour (which is lacking an upper bound in Chart-diagrams).</p>
+<p>The script is pretty straightforward:</p>
+<pre><code>import Control.Monad
+import Data.List(intercalate)
+import System.Environment(getArgs)
+
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+
+import Distribution.Package
+import Distribution.Version
+import Distribution.Verbosity
+import Distribution.Text(display)
+import Distribution.PackageDescription
+import Distribution.PackageDescription.Parse
+import Distribution.PackageDescription.Configuration
+
+type VersionRangeS = String
+
+type DependencyMap = Map.Map PackageName (Map.Map VersionRangeS (Set.Set PackageName))
+
+getDependencyMap :: PackageDescription -&gt; DependencyMap
+getDependencyMap pd = foldr f Map.empty (buildDepends pd)
+  where
+    f :: Dependency -&gt; DependencyMap  -&gt; DependencyMap
+    f (Dependency p vr) = Map.insert p (Map.singleton (display vr) (Set.singleton (pkgName (package pd))))
+
+printMergedDependencies :: [PackageDescription] -&gt; IO ()
+printMergedDependencies pds = do
+  forM_ (Map.toList dmap) $ \(pn,versions) -&gt; do
+    putStrLn (display pn ++ &quot;:&quot;)
+    forM_ (Map.toList versions) $ \(version,pnset) -&gt; do
+       putStrLn (&quot;    &quot; ++ version ++ &quot; (&quot; ++ intercalate &quot;,&quot; (map display (Set.toList pnset)) ++ &quot;)&quot;)
+  where
+    dmap :: DependencyMap
+    dmap = Map.unionsWith (Map.unionWith Set.union) (map getDependencyMap pds)
+
+scanPackages :: [FilePath] -&gt; IO ()
+scanPackages fpaths = do
+    pds &lt;- mapM loadPackageDescription fpaths
+    printMergedDependencies pds
+  where
+    loadPackageDescription path = do
+      pd &lt;- fmap flattenPackageDescription (readPackageDescription silent path)
+      putStrLn (&quot;* loaded &quot; ++ display (package pd))
+      return pd
+
+main = getArgs &gt;&gt;= scanPackages      </code></pre>
+<p>I'd be interested in other tools used for managing suites of cabal configurations.</p>
+      </article>
+    </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-content"></div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

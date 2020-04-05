@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Accessing the cabal version from an application">
+    <meta name="twitter:description" content="">
+        <title>Accessing the cabal version from an application</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header id="header">
+      <div class="header-content">
+        <nav>
+            <a href="/"><div >Home</div></a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
+        </a>
+    </div>
+      </div>
+    </header>
+
+<div id="page">
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Accessing the cabal version from an application
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2011-11-21</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>I wanted the --version flag in an application to return the version from the cabal file. Unable to find solution for this on the net, I ventured into the darcs source code to for a solution. It's actually pretty easy:</p>
+<h2 id="step-1">Step 1</h2>
+<p>Change the Build-Type field in the cabal file to be "Custom". This means cabal will look for a Setup.hs file to control the build.</p>
+<h2 id="step-2">Step 2</h2>
+<p>Create a Setup.hs that autogenerates a haskell module containing the version number. Here's mine:</p>
+<pre><code>import Distribution.Simple(defaultMainWithHooks, UserHooks(..), simpleUserHooks )
+import Distribution.Simple.Utils(rewriteFile)
+import Distribution.Package(packageVersion)
+import Distribution.Simple.BuildPaths(autogenModulesDir)
+import System.FilePath((&lt;/&gt;))
+import Data.Version(showVersion)
+generateVersionModule pkg lbi = do
+let dir = autogenModulesDir lbi
+let version = packageVersion pkg
+
+rewriteFile (dir &lt;/&gt; &quot;Version.hs&quot;) $ unlines
+[&quot;module Version where&quot;
+,&quot;version :: String&quot;
+,&quot;version = \&quot;&quot; ++ showVersion version ++ &quot;\&quot;&quot;
+]
+
+myBuildHook pkg lbi hooks flags = do
+generateVersionModule pkg lbi
+buildHook simpleUserHooks pkg lbi hooks flags
+
+main = defaultMainWithHooks simpleUserHooks {
+buildHook=myBuildHook
+}</code></pre>
+<h2 id="step-3">Step 3</h2>
+<p>Change your program to access the created Version module. It's actually generated in the ./dist/build./autogen directory, but this seems to be correctly on the source path by default.</p>
+      </article>
+    </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-content"></div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

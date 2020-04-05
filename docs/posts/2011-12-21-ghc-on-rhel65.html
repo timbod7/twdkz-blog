@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Installing ghc 7.03 and the haskell platform on RHEL 5.6">
+    <meta name="twitter:description" content="">
+        <title>Installing ghc 7.03 and the haskell platform on RHEL 5.6</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header id="header">
+      <div class="header-content">
+        <nav>
+            <a href="/"><div >Home</div></a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
+        </a>
+    </div>
+      </div>
+    </header>
+
+<div id="page">
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Installing ghc 7.03 and the haskell platform on RHEL 5.6
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2011-12-21</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>The current haskell platform requires ghc 7.0.3. I need this to run on some RHEL 5.6 machines. Whilst this OS update was released in Jan 2011, it's based on old software. In particular, it's built with libc 2.5, which was released back in 2006. It's not able to use the prebuilt generic binary release from the <a href="http://haskell.org/ghc/download_ghc_7_0_3" title="ghc downloads page">ghc downloads page</a>. It says:</p>
+<blockquote>
+<p>NOTE: If you have too old a version of libc, then you will get an error like "floating point exception" from the binaries in these bindists. You will need to either upgrade your libc (we're not sure what the minimum version required is), or use a binary package built for your distribution instead.</p>
+</blockquote>
+<p>I sure don't want to upgrade libc, and to the best of my knowledge there's no binary package built for RHEL. So, I'll need to build it myself from source. But we need ghc to compile ghc, and to make it worse, we need a version &gt;= 6.10, and the binaries for these won't work with libc 2.5 either. So, our approach needs to be:</p>
+<ol>
+<li>Compile and install 6.10.4 using 6.8.3</li>
+<li>Compile a binary distribution of 7.0.3 using 6.10.4</li>
+<li>Install the 7.0.3 binary distribution</li>
+<li>Compile and install the haskell platform 2011.2.0.1</li>
+</ol>
+<p>But wait, as it turns out, the RHEL 5.6 C compiler (gcc 4.1.2) doesn't seem to be compatible with recent ghc builds either, giving errors like:</p>
+<pre><code>rts/dist/build/RtsStartup.dyn_o: relocation R_X86_64_PC32 against `StgRun&#39; can
+not be used when making a shared object; recompile with -fPIC</code></pre>
+<p>(there are some details on the <a href="http://hackage.haskell.org/trac/ghc/wiki/Building/Troubleshooting">building and troubleshooting ghc page</a>) So, you need a more recent gcc also. I could have build this from source also, but luckily I had a working gcc 4.4.3 build already present. For reference, I needed to download:</p>
+<ul>
+<li>ghc-6.10.4-src.tar.bz2</li>
+<li>ghc-6.8.3-x86_64-unknown-linux.tar.bz2</li>
+<li>ghc-7.0.3-src.tar.bz2</li>
+<li>haskell-platform-2011.2.0.1.tar.gz</li>
+</ul>
+<p>And here's the commands used:</p>
+<pre><code># General setup
+# Assumes downloaded files are in $BASE/downloads
+BASE=/tmp/ghc-dev
+GCC443DIR=/opt/gcc4.4.3/bin
+mkdir -p $BASE/install
+mkdir -p $BASE/build
+
+# Start with a 6.8.3 binary
+cd $BASE/build
+tar -xjf $BASE/downloads/ghc-6.8.3-x86_64-unknown-linux.tar.bz2
+export PATH=/usr/bin:/sbin:/bin
+cd $BASE/build/ghc-6.8.3
+./configure --prefix $BASE/install/ghc-6.8.3
+make install
+
+# Build 6.10.4 from src
+cd $BASE/build
+tar -xjf $BASE/downloads/ghc-6.10.4-src.tar.bz2 
+export PATH=$BASE/install/ghc-6.8.3/bin:/usr/sbin:/usr/bin:/sbin:/bin
+cd $BASE/build/ghc-6.10.4
+./configure --prefix $BASE/install/ghc-6.10.4
+make
+make install
+
+# Build 7.0.3 from src, using 6.10.4 and gcc 4.4.3
+# (gcc 4.1.2 from RHEL doesn&#39;t seem to work)
+cd $BASE/build
+tar -xjf $BASE/downloads/ghc-7.0.3-src.tar.bz2 
+export PATH=$BASE/install/ghc-6.10.4/bin:$GCC443DIR:/usr/sbin:/usr/bin:/sbin:/bin
+cd $BASE/build/ghc-7.0.3
+./configure
+make
+make binary-dist
+ 
+# Unpack and install the 7.0.3 bin-dist
+cd /tmp
+rm -rf /tmp/ghc-7.0.3
+tar -xjf $BASE/build/ghc-7.0.3/ghc-7.0.3-x86_64-unknown-linux.tar.bz2
+cd /tmp/ghc-7.0.3
+./configure --prefix $BASE/install/ghc-7.0.3
+make install
+
+# Unpack and install the haskell platform
+cd $BASE/build
+export PATH=$BASE/install/ghc-7.0.3/bin:$GCC443DIR:/usr/sbin:/usr/bin:/sbin:/bin
+tar -xzf $BASE/downloads/haskell-platform-2011.2.0.1.tar.gz
+cd $BASE/build/haskell-platform-2011.2.0.1
+./configure --prefix $BASE/install/ghc-7.0.3
+make
+make install</code></pre>
+<p>Be prepared to chew up some CPU cycles! Pleasingly, once I sorted out the gcc version issue, all of the above worked without problems.</p>
+      </article>
+    </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-content"></div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

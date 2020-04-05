@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Data analysis with Monoids">
+    <meta name="twitter:description" content="">
+        <title>Data analysis with Monoids</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header id="header">
+      <div class="header-content">
+        <nav>
+            <a href="/"><div >Home</div></a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
+        </a>
+    </div>
+      </div>
+    </header>
+
+<div id="page">
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Data analysis with Monoids
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2013-05-31</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>This post expresses the key ideas of a talk I gave at FP-SYD this week.</p>
+<p><a href="http://www.haskell.org/ghc/docs/latest/html/libraries/base/Data-Monoid.html">Monoids</a> are a pretty simple concept in haskell. Some years ago I learnt of them through the excellent <a href="http://www.haskell.org/haskellwiki/Typeclassopedia">Typeclassopedia</a>, looked at the examples, and understood them quickly (which is more than can be said for many of the new ideas that one learns in haskell). However that was it. Having learnt the idea, I realised that monoids are everywhere in programming, but I'd not found much use for the Monoid typeclass abstraction itself. Recently, I've found they can be a useful tool for data analysis...</p>
+<h2 id="monoids">Monoids</h2>
+<p>First a quick recap. A monoid is a type with a binary operation, and an identity element:</p>
+<pre><code>class Monoid a where
+  mempty :: a
+  mappend :: a -&gt; a -&gt; a</code></pre>
+<p>It must satisfy a simple set of laws, specifically that the binary operation much be associative, and the identity element must actually be the identity for the given operation:</p>
+<pre><code>mappend a (mappend b c) = mappend (mappend a b) c
+mappend mempty x = x
+mappend x mempty = x</code></pre>
+<p>As is hinted by the names of the typeclass functions, lists are an obvious Monoid instance:</p>
+<pre><code>instance Monoid [a] where
+  mempty  = []
+  mappend = (++)</code></pre>
+<p>However, many types can be Monoids. In fact, often a type can be a monoid in multiple ways. Numbers are monoids under both addition and multiplication, with 0 and 1 as their respective identity elements. In the haskell standard libraries, rather than choose one kind of monoid for numbers, newtype declarations are used to given instances for both:</p>
+<pre><code>newtype Sum a = Sum { getSum :: a }
+  deriving (Eq, Ord, Read, Show, Bounded)
+
+instance Num a =&gt; Monoid (Sum a) where
+  mempty = Sum 0
+  Sum x `mappend` Sum y = Sum (x + y)
+
+newtype Product a = Product { getProduct :: a }
+  deriving (Eq, Ord, Read, Show, Bounded)
+
+instance Num a =&gt; Monoid (Product a) where
+  mempty = Product 1
+  Product x `mappend` Product y = Product (x * y)</code></pre>
+<p>We've now established and codified the common structure for a few monoids, but it's not yet clear what it has gained us. The Sum and Product instances are unwieldly - you are unlikely to want to use Sum directly to add two numbers:</p>
+<pre><code>Prelude&gt; :m Data.Monoid
+Prelude Data.Monoid&gt; 5+4
+9
+Prelude Data.Monoid&gt; getSum (mappend (Sum 5) (Sum 4))
+9</code></pre>
+<p>Before we progress, however, let's define a few more monoid instances, potentially useful for data analysis.</p>
+<pre><code>data Min a = Min a | MinEmpty deriving (Show)
+           
+data Max a = Max a | MaxEmpty deriving (Show)
+
+newtype Count = Count Int deriving (Show)
+
+instance (Ord a) =&gt; Monoid (Min a) where
+  mempty = MinEmpty
+  mappend MinEmpty m = m
+  mappend m MinEmpty = m
+  mappend (Min a) (Min b) = (Min (P.min a b))
+
+instance (Ord a) =&gt; Monoid (Max a) where
+  mempty = MaxEmpty
+  mappend MaxEmpty m = m
+  mappend m MaxEmpty = m
+  mappend (Max a) (Max b) = (Max (P.max a b))
+
+instance Monoid Count where
+  mempty = Count 0
+  mappend (Count n1) (Count n2) = Count (n1+n2)</code></pre>
+<p>Also some helper functions to construct values of all these monoid types:</p>
+<pre><code>sum :: (Num a) =&gt; a -&gt; Sum a
+sum = Sum
+
+product :: (Num a) =&gt; a -&gt; Product a
+product = Product
+
+min :: (Ord a) =&gt; a -&gt; Min a
+min = Min
+
+max :: (Ord a) =&gt; a -&gt; Max a
+max = Max
+
+count :: a -&gt; Count
+count _ = Count 1</code></pre>
+<p>These functions are trivial, but they put a consistent interface on creating monoid values. They all have a signature (a -&gt; m) where m is some monoid. For lack of a better name, I'll call functions with such signatures "monoid functions".</p>
+<h2 id="foldable">Foldable</h2>
+<p>It's time to introduce another typeclass, <a href="http://www.haskell.org/ghc/docs/latest/html/libraries/base/Data-Foldable.html">Foldable</a>. This class abstracts the classic foldr and foldl functions away from lists, making them applicable to arbitrary structures. (There's a robust debate going on right now about the merits of replacing the list specific fold functions in the standard prelude with the more general versions from Foldable.) Foldable is a large typeclass - here's the key function of interest to us:</p>
+<pre><code>class Foldable t where
+  ...
+  foldMap :: Monoid m =&gt; (a -&gt; m) -&gt; t a -&gt; m
+  ...</code></pre>
+<p>foldMap takes a monoid function and a Foldable structure, and reduces the structure down to a single value of the monoid. Lists are, of course, instances of foldable, so we can demo our helper functions:</p>
+<pre><code>*Examples&gt; let as = [45,23,78,10,11,1]
+*Examples&gt; foldMap count as
+Count 6
+*Examples&gt; foldMap sum as
+Sum {getSum = 168}
+*Examples&gt; foldMap max as
+Max 78</code></pre>
+<p>Notice how the results are all still wrapped with the newtype constructors. We'll deal with this later.</p>
+<h2 id="composition">Composition</h2>
+<p>As it turns out, tuples are already instances of Monoids:</p>
+<pre><code>instance (Monoid a,Monoid b) =&gt; Monoid (a,b) where
+  mempty = (mempty,mempty)
+  mappend (a1,b1) (a2,b2) = (mappend a1 a2,mappend b1 b2)</code></pre>
+<p>A pair is a monoid if it's elements are monoids. There are similar instances for longer tuples. We need some helper monoid functions for tuples also:</p>
+<pre><code>a2 :: (a -&gt; b) -&gt; (a -&gt; c) -&gt; a -&gt; (b,c)
+a2 b c = (,) &lt;$&gt; b &lt;*&gt; c
+
+a3 :: (a -&gt; b) -&gt; (a -&gt; c) -&gt; (a -&gt; d) -&gt; a -&gt; (b,c,d)
+a3 b c d = (,,) &lt;$&gt; b &lt;*&gt; c &lt;*&gt; d</code></pre>
+<p>These are implemented above using <a href="http://www.haskell.org/ghc/docs/latest/html/libraries/base/Control-Applicative.html">Applicative</a> operators, though I've given them more restrictive types to make their intended use here clearer. Now I can compose monoid functions:</p>
+<pre><code>*Examples&gt; let as = [45,23,78,10,11,1]
+*Examples&gt; :t (a2 min max)
+(a2 min max) :: Ord a =&gt; a -&gt; (Min a, Max a)
+*Examples&gt; foldMap (a2 min max) as
+(Min 1,Max 78)
+*Examples&gt; :t (a3 count (a2 min max) (a2 sum product))
+(a3 count (a2 min max) (a2 sum product))
+  :: (Num a, Ord a) =&gt;
+     a -&gt; (Count, (Min a, Max a), (Sum a, Product a))
+*Examples&gt; foldMap (a3 count (a2 min max) (a2 sum product)) as
+(Count 6,(Min 1,Max 78),(Sum {getSum = 168},Product {getProduct = 8880300}))</code></pre>
+<p>It's worth noting here that the composite computations are done in a single traversal of the input list.</p>
+<h2 id="more-complex-calculations">More complex calculations</h2>
+<p>Happy with this, I decide to extend my set of basic computations with the arithmetic mean. There is a problem, however. The arithmetic mean doesn't "fit" as a monoid - there's no binary operation such that a mean for a combined set of data can be calculated from the mean of two subsets.</p>
+<p>What to do? Well, the mean is the sum divided by the count, both of which are monoids:</p>
+<pre><code>newtype Mean a = Mean (Sum a,Count) deriving (Show)
+
+instance (Num a) =&gt; Monoid (Mean a) where
+  mempty = Mean mempty
+  mappend (Mean m1) (Mean m2) = Mean (mappend m1 m2)
+
+mean v = Mean (Sum v,Count 1)</code></pre>
+<p>So I can calculate the mean if I am prepared to do a calculation after the foldMap:</p>
+<pre><code>*Examples&gt; let as = [45,23,78,10,11,1.5]
+*Examples&gt; foldMap mean as
+Mean (Sum {getSum = 168.5},Count 6)
+*Examples&gt; let (Mean (Sum t,Count n)) = foldMap mean as in t / fromIntegral n
+28.083333333333332</code></pre>
+<h2 id="the-aggregation-type-class">The Aggregation type class</h2>
+<p>For calculations like <code>mean</code>, I need something more than a monoid. I need a monoid for accumulating the values, and then, once the accumulation is complete, a postprocessing function to compute the final result. Hence a new typeclass to extend Monoid:</p>
+<pre><code>{-# LANGUAGE TypeFamilies #-}
+
+class (Monoid a) =&gt; Aggregation a where
+  type AggResult a :: *
+  aggResult :: a -&gt; AggResult a</code></pre>
+<p>This makes use of the <a href="http://www.haskell.org/haskellwiki/GHC/Type_families">type families ghc extension</a>. We need this to express the fact that our postprocessing function aggResult has a different return type to the type of the monoid. In the above definition:</p>
+<ul>
+<li>aggResult is a function that gives you the <em>value</em> of the final result from the <em>value</em> of the monoid</li>
+<li>AggResult is a <em>type</em> function that gives you the <em>type</em> of the final result from the <em>type</em> of the monoid</li>
+</ul>
+<p>We can write an instance of Aggregation for Mean:</p>
+<pre><code>instance (Fractional a) =&gt; Aggregation (Mean a) where
+  type AggResult (Mean a) = a
+  aggResult (Mean (Sum t,Count n)) = t/fromIntegral n</code></pre>
+<p>and test it out:</p>
+<pre><code>*Examples&gt; let as = [45,23,78,10,11,1.5]
+*Examples&gt; aggResult (foldMap mean as)
+28.083333333333332
+*Examples&gt; </code></pre>
+<p>Nice. Given that <code>aggResult (foldMap ...)</code> will be a common pattern, lets write a helper:</p>
+<pre><code>afoldMap :: (Foldable t, Aggregation a) =&gt; (v -&gt; a) -&gt; t v -&gt; AggResult a
+afoldMap f vs = aggResult (foldMap f vs)</code></pre>
+<p>In order to use the monoids we defined before (sum,product etc) we need to define Aggregation instances for them also. Even though they are trivial, it turns out to be useful, as we can make the aggResult function strip off the newtype constructors that were put there to enable the Monoid typeclass:</p>
+<pre><code>instance (Num a) =&gt; Aggregation (Sum a)  where
+  type AggResult (Sum a) = a
+  aggResult (Sum a) = a
+    
+instance (Num a) =&gt; Aggregation (Product a)  where
+  type AggResult (Product a) = a
+  aggResult (Product a) = a
+
+instance (Ord a) =&gt; Aggregation (Min a)  where
+  type AggResult (Min a) = a
+  aggResult (Min a) = a
+
+instance (Ord a) =&gt; Aggregation (Max a)  where
+  type AggResult (Max a) = a
+  aggResult (Max a) = a
+
+instance Aggregation Count where
+  type AggResult Count = Int
+  aggResult (Count n) = n
+
+instance (Aggregation a, Aggregation b) =&gt; Aggregation (a,b) where
+  type AggResult (a,b) = (AggResult a, AggResult b)
+  aggResult (a,b) = (aggResult a, aggResult b)
+
+instance (Aggregation a, Aggregation b, Aggregation c) =&gt; Aggregation (a,b,c) where
+  type AggResult (a,b,c) = (AggResult a, AggResult b, AggResult c)
+  aggResult (a,b,c) = (aggResult a, aggResult b, aggResult c)</code></pre>
+<p>This is mostly boilerplate, though notice how the tuple instances delve into their components in order to postprocess the results. Now everything fits together cleanly:</p>
+<pre><code>*Examples&gt; let as = [45,23,78,10,11,1.5]
+*Examples&gt; :t (a3 count (a2 min max) mean)
+(a3 count (a2 min max) mean)
+  :: Ord a =&gt; a -&gt; (Count, (Min a, Max a), Mean a)
+*Examples&gt; afoldMap (a3 count (a2 min max) mean) as
+(6,(1.5,78.0),28.083333333333332)
+*Examples&gt; </code></pre>
+<p>The 4 computations have been calculated all in a single pass over the input list, and the results are free of the type constructors that are no longer required once the aggregation is complete.</p>
+<p>Another example of an Aggregation where we need to postprocess the result is counting the number of unique items. For this we will keep a set of the items seen, and then return the size of this set at the end:</p>
+<pre><code>newtype CountUnique a = CountUnique (Set.Set a)
+
+instance Ord a =&gt; Monoid (CountUnique a) where
+  mempty = CountUnique Set.empty
+  mappend (CountUnique s1) (CountUnique s2) = CountUnique (Set.union s1 s2)
+
+instance Ord a =&gt; Aggregation (CountUnique a) where
+  type AggResult (CountUnique a) = Int
+  aggResult (CountUnique s1) = Set.size s1
+
+countUnique :: Ord a =&gt; a -&gt; CountUnique a
+countUnique a = CountUnique (Set.singleton a)</code></pre>
+<p>.. in use:</p>
+<pre><code>*Examples&gt; let as = [5,7,8,7,11,10,11]
+*Examples&gt; afoldMap (a2 countUnique count) as
+(5,7)</code></pre>
+<h2 id="higher-order-aggregation-functions">Higher order aggregation functions</h2>
+<p>All of the calculations seen so far have worked consistently across all values in the source data structure. We can make use of the <code>mempty</code> monoid value in order to filter our data set, and or aggregate in groups. Here's a couple of higher order monoid functions for this:</p>
+<pre><code>afilter :: Aggregation m =&gt; (a -&gt; Bool) -&gt; (a -&gt; m) -&gt; (a -&gt; m)
+afilter match mf = \a -&gt; if match a then mf a else mempty
+
+newtype MMap k v = MMap (Map.Map k v)
+  deriving Show
+
+instance (Ord k, Monoid v) =&gt; Monoid (MMap k v) where
+  mempty = MMap (Map.empty)
+  mappend (MMap m1) (MMap m2) = MMap (Map.unionWith mappend m1 m2)
+
+instance (Ord k, Aggregation v) =&gt; Aggregation (MMap k v) where
+  type AggResult (MMap k v) = Map.Map k (AggResult v)
+  aggResult (MMap m) = Map.map aggResult m
+
+groupBy :: (Ord k, Aggregation m) =&gt; (a -&gt; k) -&gt; (a -&gt; m) -&gt; (a -&gt; MMap k m)
+groupBy keyf valuef = \a -&gt; MMap (Map.singleton (keyf a) (valuef a))</code></pre>
+<p><code>afilter</code> restricts the application of a monoid function to a subset of the input data. eg to calculate the sum of all the values, and the sum of values less than 20:</p>
+<pre><code>*Examples&gt; let as = [5,10,20,45.4,35,1,3.4]
+*Examples&gt; afoldMap (a2 sum (afilter (&lt;=20) sum)) as
+(119.8,39.4)</code></pre>
+<p><code>groupBy</code> takes a key function and a monoid function. It partitions the data set using the key function, and applies a monoid function to each subset, returning all of the results in a map. Non-numeric data works better as an example here. Let's take a set of words as input, and for each starting letter, calculate the number of words with that letter, the length of the shortest word, and and the length of longest word:</p>
+<pre><code>*Examples&gt; let as = words &quot;monoids are a pretty simple concept in haskell some years ago i learnt of them through the excellent typeclassopedia looked at the examples and understood them straight away which is more than can be said for many of the new ideas that one learns in haskell&quot;
+*Examples&gt; :t groupBy head (a3 count (min.length) (max.length))
+groupBy head (a3 count (min.length) (max.length))
+  :: Ord k =&gt; [k] -&gt; MMap k (Count, Min Int, Max Int)
+*Examples&gt; afoldMap (groupBy head (a3 count (min.length) (max.length))) as
+fromList [(&#39;a&#39;,(6,1,4)),(&#39;b&#39;,(1,2,2)),(&#39;c&#39;,(2,3,7)),(&#39;e&#39;,(2,8,9)),(&#39;f&#39;,(1,3,3)),(&#39;h&#39;,(2,7,7)),(&#39;i&#39;,(5,1,5)),(&#39;l&#39;,(3,6,6)),(&#39;m&#39;,(3,4,7)),(&#39;n&#39;,(1,3,3)),(&#39;o&#39;,(3,2,3)),(&#39;p&#39;,(1,6,6)),(&#39;s&#39;,(4,4,8)),(&#39;t&#39;,(9,3,15)),(&#39;u&#39;,(1,10,10)),(&#39;w&#39;,(1,5,5)),(&#39;y&#39;,(1,5,5))]</code></pre>
+<p>Many useful data analysis functions can be written through simple function application and composition using these primitive monoid functions, the product combinators a2 and a3 and these new filtering and grouping combinators.</p>
+<h2 id="disk-based-data">Disk-based data</h2>
+<p>As pointed out before, regardless of the complexity of the computation, it's done with a single traversal of the input data. This means that we don't need to limit ourselves to lists and other in memory Foldable data structures. Here's a function similar to foldMap, but that works over the lines in a file:</p>
+<pre><code>foldFile :: Monoid m =&gt; FilePath -&gt; (BS.ByteString -&gt; Maybe a) -&gt; (a -&gt; m) -&gt; IO m
+foldFile fpath pf mf = do
+  h &lt;- openFile fpath ReadMode
+  m &lt;- loop h mempty
+  return m
+  where
+    loop h m = do
+      eof &lt;- hIsEOF h
+      if eof
+        then (return m)
+        else do
+          l &lt;- BS.hGetLine h
+          case pf l of
+            Nothing -&gt; loop h m
+            (Just a) -&gt; let m&#39; = mappend m (mf a)
+                        in loop h m&#39;
+
+afoldFile :: Aggregation m =&gt; FilePath -&gt; (BS.ByteString -&gt; Maybe a) -&gt; (a -&gt; m) -&gt; IO (AggResult m)
+afoldFile fpath pf mf = fmap aggResult (foldFile fpath pf mf)</code></pre>
+<p>foldFile take two parameters - a function to parse each line of the file, the other is the monoid function to do the aggregation. Lines that fail to parse are skipped. (I can here questions in the background "What about strictness and space leaks?? - I'll come back to that). As an example usage of aFoldFile, I'll analyse some stock data. Assume that I have it in a CSV file, and I've got a function to parse one CSV line into a sensible data value:</p>
+<pre><code>import qualified Data.ByteString.Char8 as BS
+import Data.Time.Calendar
+
+data Prices = Prices {
+  pName :: String,          -- The stock code
+  pDate :: Day,             -- The historic date
+  pOpen :: Double,          -- The price at market open
+  pHigh :: Double,          -- The highest price on the date
+  pLow :: Double,           -- The lowest price on the date
+  pClose :: Double,         -- The price at market close
+  pVolume :: Double         -- How many shares were traded
+  } deriving (Show)
+
+  parsePrices :: BS.ByteString -&gt; Maybe Prices
+  parsePrices = ...</code></pre>
+<p>Now I can use my monoid functions to analyse the file based data. How many google prices do I have, over what date range:</p>
+<pre><code>*Examples&gt; let stats =  afilter ((&quot;GOOG&quot;==).pName) (a3 count (min.pDate) (max.pDate))
+*Examples&gt; :t stats
+stats
+  :: Prices
+     -&gt; (Count,
+         Min time-1.4:Data.Time.Calendar.Days.Day,
+         Max time-1.4:Data.Time.Calendar.Days.Day)
+*Examples&gt; afoldFile &quot;prices.csv&quot; parsePrices stats
+(1257,2008-05-29,2013-05-24)
+*Examples&gt; </code></pre>
+<p>Perhaps I want to aggregate my data per month, getting traded price range and total volume. We need a helper function to work out the month of each date:</p>
+<pre><code>startOfMonth :: Day -&gt; Day
+startOfMonth t = let (y,m,d) = toGregorian t
+                 in fromGregorian y m 1</code></pre>
+<p>And then we can use groupBy to collect data monthly:</p>
+<pre><code>:*Examples&gt; let stats =  afilter ((&quot;GOOG&quot;==).pName) (groupBy (startOfMonth.pDate) (a3 (min.pLow) (max.pHigh) (sum.pVolume)))
+*Examples&gt; :t stats
+stats
+  :: Prices
+     -&gt; MMap
+          time-1.4:Data.Time.Calendar.Days.Day
+          (Min Double, Max Double, Sum Double)
+*Examples&gt; results &lt;- afoldFile &quot;prices.csv&quot; parsePrices stats
+*Examples&gt; mapM_ print (Map.toList results)
+(2008-05-01,(573.2,589.92,8073107.0))
+(2008-06-01,(515.09,588.04,9.3842716e7))
+(2008-07-01,(465.6,555.68,1.04137619e8))
+...
+(2013-03-01,(793.3,844.0,4.2559856e7))
+(2013-04-01,(761.26,827.64,5.3574633e7))
+(2013-05-01,(816.36,920.6,4.1080028e7))</code></pre>
+<h2 id="conclusion">Conclusion</h2>
+<p>So, I hope I've shown that monoids are useful indeed. They can form the core of a framework for cleanly specifing quite complex data analysis tasks.</p>
+<p>An additional typeclass which I called "Aggregation" extends Monoid and provides for a broader range of computations and also cleaner result types (thanks to type families). There was some discussion when I presented this talk as to whether a single method typeclass like Aggregation was a "true" abstraction, given it has no associated laws. This is a valid point, however using it simplifies the syntax and usage of monoidal calculations significantly, and for me, this makes it worth having.</p>
+<p>There remains an elephant in the room, however, and this is space leakage. Lazy evalulation means that, as written, most of the calculations shown run in space proportional to the input data set. Appropriate strictness annotations and related modifications will fix this, but it turns out to be slightly irritating. This blog post is already long enough, so I'll address space leaks in in a subsequent post...</p>
+      </article>
+    </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-content"></div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>

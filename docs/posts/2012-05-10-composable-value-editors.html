@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Composable Value Editors">
+    <meta name="twitter:description" content="">
+        <title>Composable Value Editors</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header id="header">
+      <div class="header-content">
+        <nav>
+            <a href="/"><div >Home</div></a>
+        </nav>
+    
+        <div class="right-sidebar">
+            <a class="ext-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
+        </a>
+    </div>
+      </div>
+    </header>
+
+<div id="page">
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              Composable Value Editors
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2012-05-10</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <p>Graphical User Interfaces (GUIs) in haskell are frustrating. It's not yet clear what is the cleanest model for fitting GUIs into functional programming. Currently there are two main approaches:</p>
+<ul>
+<li><p>Various effort at applying Functional Reactive Programming (FRP) to GUIs. These are somewhat experimental, and tend to be proof of concepts implementing a small range of GUI features (several of these libraries are listed <a href="http://www.haskell.org/haskellwiki/Applications_and_libraries/GUI_libraries#High-level">here</a>).</p></li>
+<li><p>The full blown toolkits which provide a comprehensive imperative binding to mainstream toolkits. The two key contenders here are <a href="http://projects.haskell.org/gtk2hs/">gtk2hs</a> and <a href="http://www.haskell.org/haskellwiki/WxHaskell">wxHaskell</a>.</p></li>
+</ul>
+<p>Whilst enticing, the FRP approach doesn't currently look appropriate for building rich GUI applications. wxHaskell and gtk2hs at least provide the functionality required, but the low level imperative approach based in the IO monad is tedious to a fluent haskell developer. Here's a code snippet:</p>
+<pre><code>b &lt;- buttonNew
+image &lt;- imageNewFromStock stockAdd IconSizeSmallToolbar
+containerAdd b image
+set b [buttonRelief := ReliefNone]
+on b buttonActivated {
+     ... button activated action ...
+}</code></pre>
+<p>It's not hard to write this sort of code, but it is tedious, especially considering the amount that is required to build a whole application.</p>
+<p>This post outlines my experiments to reduce the amount of imperative code required for GUIs, yet retaining compatibility with the imperative toolkits. Initially I've been focussed on "value editors" (VEs) aka "forms". These are GUI components to capture/edit values of ideally arbitrary complexity. I've two key goals, composability and abstraction.</p>
+<p><em>Composability</em>: I want to be able to compose my value editors effortlessly. Whilst the existing toolkits let you compose widgets using containers and glue code, it's verbose indeed.</p>
+<p><em>Abstraction</em>: I'd like to define my VEs independently from the underlying toolkit. But I'm looking for something more than a thin layer over the existing toolkits. I want to define my VEs in terms of the structure of the values involved, and worry about the formatting and layout later, if at all.</p>
+<p>If we take this abstraction far enough, it should be possible to reuse our structural VEs definitions beyond gtk2hs and wxWindows. For example, a JSON generator+parser pair can be considered a VE - in the sense that to edit a value, one can generate the json text, edit the text, and then parse to recover the new value. Of course, it's likely to be a balancing act between abstraction and functionality - we'll have to see how this pans out.</p>
+<h1 id="an-abstract-ui">An Abstract UI</h1>
+<p>OK, enough preamble, here's a GADT I've devised to capture VEs:</p>
+<pre><code>-- | A GADT describing abstracted, user interface components for manipulating
+-- values of type a.
+data VE a where
+    -- | A String field
+    Entry :: VE String
+
+    -- | An enumeration. A list of label string are supplied,
+    -- the VE value is the integer index of the selected label.
+    EnumVE :: [String] -&gt; VE Int
+
+    -- | Annotate a VE with a text label
+    Label :: String -&gt; VE a -&gt; VE a
+
+    -- | A &quot;product&quot; VE that combines values from two other VEs
+    AndVE :: (VE a) -&gt; (VE b) -&gt; VE (a,b)
+
+    -- | A &quot;sum&quot; VE that captures the value from either of two other VEs
+    OrVE  :: (VE a) -&gt; (VE b) -&gt; VE (Either a b)
+
+    -- | A VE for manipulating  a list of values. The supplied function lets the
+    -- the VE display the list items to the user (eg for selection).
+    ListVE :: (a-&gt;String) -&gt; VE a -&gt; VE [a]
+
+    -- | Convert a VE over a type a, to a VE over a type b, given
+    -- the necessary mappings. Either String captures the potential
+    -- failure in the mapping.
+    MapVE :: (a -&gt; Either String b) -&gt; (b -&gt; a) -&gt; VE a -&gt; VE b
+
+    -- | Annotate a VE with a default value
+    DefaultVE :: a -&gt; VE a -&gt; VE a
+
+-- A typeclass to build VEs
+class HasVE a where
+  mkVE :: VE a
+
+(.*.) = AndVE
+(.+.) = OrVE
+infixr 5 .*.
+infixr 5 .+.</code></pre>
+<p>And here's an example usage for a simple data type:</p>
+<pre><code>data Gender = Male | Female deriving (Show,Enum)
+
+data Person = Person {
+    st_name :: String,
+    st_age :: Int,
+    st_gender :: Gender
+} deriving (Show)
+
+instance HasVE Person
+  where
+    mkVE = MapVE toStruct fromStruct
+        (   Label &quot;Name&quot; nonEmptyString
+        .*. Label &quot;Age&quot;   mkVE
+        .*. Label &quot;Gender&quot;   mkVE
+        )
+      where
+        toStruct (a,(b,c)) = Right (Person a b c)
+        fromStruct (Person a b c) = (a,(b,c))
+
+nonEmptyString :: VE String
+nonEmptyString = ...
+
+instance HasVE Int ...
+instance HasVE String ...
+instance HasVE Gender ...</code></pre>
+<p>This captures in some sense the abstract semantics for an editor of Person values. We need to capture:</p>
+<ul>
+<li>a non-empty string for the name,</li>
+<li>an integer for the age</li>
+<li>a gender enumeration</li>
+</ul>
+<p>and know how to pack/unpack these into a person value.</p>
+<h1 id="a-gtk-ui">A GTK UI</h1>
+<p>But what can we do with this? We need to turn this abstruct VE into a concrete UI. There's a library function to do this for an arbitrary VE:</p>
+<pre><code>data GTKWidget a = GTKWidget {
+    ui_widget :: Widget,
+    ui_set :: a -&gt; IO (),
+    ui_get :: IO (ErrVal a),
+    ui_reset :: IO ()
+}
+
+uiGTK  :: VE  a -&gt; IO (GTKWidget a)</code></pre>
+<p>The uiGTK function turns our abstract VE a into GTK component for editing a value of type a. In addition to building the compound widget, it gives us functions to:</p>
+<ul>
+<li>put a value into the widget</li>
+<li>recover a value from the widget</li>
+<li>restore the widget to a default value</li>
+</ul>
+<p>A higher level function constructs a modal dialog to get a value of type a from the user.</p>
+<pre><code>data ModalDialog e a = ModalDialog {
+    md_dialog :: Dialog,
+    md_gw :: GTKWidget a,
+    md_run :: IO (Maybe a)
+}
+
+modalDialogNew :: String -&gt; VE a -&gt; IO (ModalDialog a)</code></pre>
+<p>Hence running this:</p>
+<pre><code>dialog &lt;- modalDialogNew &quot;Example 2&quot; (mkVE :: Person)
+ma &lt;- md_run dialog</code></pre>
+<p>Results in this:</p>
+<p><img src="2012-05-10-composable-value-editors/example2.png" alt="Example 2" /></p>
+<p>The automatically generated dialog is simple, but quite functional:</p>
+<ul>
+<li>invalid fields have a red background, dynamically updated with each keystroke</li>
+<li>Fields have sensible defaults - often invalid to force entry from a user</li>
+</ul>
+<p>More complex UIs are of course possible. As should be clear from the VE GADT above we support sum and product types, lists, etc, and can map these with arbitrary code. Hence we can construct GTK UIs for a very large range of haskell values. A slightly more complex example composes the previous VE:</p>
+<pre><code>data Team = Team {
+    t_leader :: Person,
+    t_followers :: [Person]
+} deriving (Show)
+
+instance HasVE Team ...</code></pre>
+<p>Resulting in:</p>
+<p><img src="2012-05-10-composable-value-editors/example3.png" alt="Example 3" /></p>
+<p>Recursive types are supported, so its possible to build GTK VEs for expression trees, etc.</p>
+<h1 id="json-serialisation">JSON Serialisation</h1>
+<p>As I alluded to previously, given VE a, we can automatically generate a JSON generator and parser for values of type a:</p>
+<pre><code>data VEJSON a = VEJSON {
+        uj_tojson ::  a -&gt; DA.Value,
+        uj_fromjson :: DA.Value -&gt; Maybe a
+}
+
+uiJSON :: VE ConstE a -&gt; VEJSON a</code></pre>
+<h1 id="related-work">Related Work</h1>
+<p>Well into working on these ideas, I was reminded of two somewhat similar haskell projects: <a href="http://www.sandr.dds.nl/FunctionalForms/">Functional Forms</a> and <a href="http://www.haskell.org/haskellwiki/TV">Tangible Values</a>. Functional Forms aims to ease the creation of wxHaskell dialogs to edit values. The exact purpose Tangeable Values is a little unclear to me, but it appears to be about automatically generating UIs suitable for visualising function behaviour and exploring functional programming.</p>
+<h1 id="future-work">Future Work</h1>
+<p>Currently I have a library that implements the VE GADT to automatically build GTK editors and JSON serialisers. There's many ways to progress this work. Some of my ideas follow...</p>
+<p>Whilst the generated GTK editor is a sensible default, there are only very limited ways in which the editor can be customised. I envisage a model where the uiGTK function takes an extra parameter akin to a style sheet, given extra information controlling the UI layout and formatting, etc.</p>
+<p>I can envisage many other useful things that could automatically be derived from VE definitions:</p>
+<ul>
+<li>equivalent functionality for wxHaskell</li>
+<li>console GUIs</li>
+<li>Funky UIs implemented with primitives more interesting than the standard toolkit widgets: eg zoomable UIs, or UIs more suited to table based platforms.</li>
+<li>web GUIs. This could be done by automatically generating javascript and corresponding server side haskell code.</li>
+</ul>
+<p>Finally, It might be worth investigate whether the <a href="http://www.haskell.org/haskellwiki/GHC.Generics">GHC Generic</a> mechansism might be used to automatically generate VE definitions.</p>
+<p>So there's plenty of directions this work can go, but right now I want to put it to the test and build an application!</p>
+      </article>
+    </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-content"></div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>
