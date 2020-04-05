@@ -219,6 +219,8 @@ body {
   max-width: var(--page-max-width);
   width: 100%;
   border-top: 1px solid black;
+  display: flex;
+  flex-direction: row-reverse;
 }
 
 .date {

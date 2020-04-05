@@ -1,0 +1,1117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>Tim Docker</title>
+    <link href="https://tim.dockerz.net/atom.xml" rel="self" type="application/rss+xml" />
+  <updated>2020-04-05T02:32:55Z</updated>
+  <author>
+      <name>Tim Docker</name>
+  </author>
+  <id>https://tim.dockerz.net/</id>
+
+  <entry>
+      <title>Accessing the cabal version from an application</title>
+      <link href="https://tim.dockerz.netposts/2011-11-21-cabal-version-access.html"/>
+      <id>https://tim.dockerz.netposts/2011-11-21-cabal-version-access.html</id>
+      <updated>2011-11-21T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;I wanted the --version flag in an application to return the version from the cabal file. Unable to find solution for this on the net, I ventured into the darcs source code to for a solution. It&#39;s actually pretty easy:&lt;/p&gt;
+&lt;h2 id=&quot;step-1&quot;&gt;Step 1&lt;/h2&gt;
+&lt;p&gt;Change the Build-Type field in the cabal file to be &quot;Custom&quot;. This means cabal will look for a Setup.hs file to control the build.&lt;/p&gt;
+&lt;h2 id=&quot;step-2&quot;&gt;Step 2&lt;/h2&gt;
+&lt;p&gt;Create a Setup.hs that autogenerates a haskell module containing the version number. Here&#39;s mine:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import Distribution.Simple(defaultMainWithHooks, UserHooks(..), simpleUserHooks )
+import Distribution.Simple.Utils(rewriteFile)
+import Distribution.Package(packageVersion)
+import Distribution.Simple.BuildPaths(autogenModulesDir)
+import System.FilePath((&amp;lt;/&amp;gt;))
+import Data.Version(showVersion)
+generateVersionModule pkg lbi = do
+let dir = autogenModulesDir lbi
+let version = packageVersion pkg
+
+rewriteFile (dir &amp;lt;/&amp;gt; &amp;quot;Version.hs&amp;quot;) $ unlines
+[&amp;quot;module Version where&amp;quot;
+,&amp;quot;version :: String&amp;quot;
+,&amp;quot;version = \&amp;quot;&amp;quot; ++ showVersion version ++ &amp;quot;\&amp;quot;&amp;quot;
+]
+
+myBuildHook pkg lbi hooks flags = do
+generateVersionModule pkg lbi
+buildHook simpleUserHooks pkg lbi hooks flags
+
+main = defaultMainWithHooks simpleUserHooks {
+buildHook=myBuildHook
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&quot;step-3&quot;&gt;Step 3&lt;/h2&gt;
+&lt;p&gt;Change your program to access the created Version module. It&#39;s actually generated in the ./dist/build./autogen directory, but this seems to be correctly on the source path by default.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>HBeat Lives</title>
+      <link href="https://tim.dockerz.netposts/2011-11-29-hbeat-lives.html"/>
+      <id>https://tim.dockerz.netposts/2011-11-29-hbeat-lives.html</id>
+      <updated>2011-11-29T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;Reorganising my projects home, I copied in the old documentation for my &lt;a href=&quot;http://dockerz.net/twd/hBeat&quot;&gt;hbeat&lt;/a&gt; program. The docs needed some updating, so I decided to check it all still works ok. Fearing bitrot, I was pleased and a little suprised to see that on my recently rebuilt ubuntu machine, all I needed was&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sudo apt-get install libsdl1.2-dev
+sudo apt-get install libsdl-mixer1.2-dev
+cabal-dev install hbeat&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Or at least that&#39;s what I first thought. The program fired up ok, but failed to respond to mouse clicks as expected. It turns out that this was a pre-existing bug - if the screen redraws don&#39;t happen fast enough, hbeat gets further and further behind in it&#39;s event processing eventually ignoring everything. A small code fix (now published to hackage) causes out-of-date redraw requests to be dropped. But why was I seeing this problem now? It seems that since I wrote the software, openGL via SDL seems to have got alot slower. The compositing window manager (compiz) seems to be the culprit - it&#39;s consuming significant cpu time whilst hbeat is running. Some references to this can be found &lt;a href=&quot;http://forums.libsdl.org/viewtopic.php?t=6511&amp;amp;sid=19ba7791909f191ef4959cf13841caec&quot;&gt;here&lt;/a&gt;. I guess there&#39;s a downside to all those fancy compositing effects. It&#39;s a shame hbeat is now a fair bit glitchier than it was before. Maybe sometime I&#39;ll look at this, but for now at least it still works.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Installing ghc 7.03 and the haskell platform on RHEL 5.6</title>
+      <link href="https://tim.dockerz.netposts/2011-12-21-ghc-on-rhel65.html"/>
+      <id>https://tim.dockerz.netposts/2011-12-21-ghc-on-rhel65.html</id>
+      <updated>2011-12-21T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;The current haskell platform requires ghc 7.0.3. I need this to run on some RHEL 5.6 machines. Whilst this OS update was released in Jan 2011, it&#39;s based on old software. In particular, it&#39;s built with libc 2.5, which was released back in 2006. It&#39;s not able to use the prebuilt generic binary release from the &lt;a href=&quot;http://haskell.org/ghc/download_ghc_7_0_3&quot; title=&quot;ghc downloads page&quot;&gt;ghc downloads page&lt;/a&gt;. It says:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;NOTE: If you have too old a version of libc, then you will get an error like &quot;floating point exception&quot; from the binaries in these bindists. You will need to either upgrade your libc (we&#39;re not sure what the minimum version required is), or use a binary package built for your distribution instead.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;I sure don&#39;t want to upgrade libc, and to the best of my knowledge there&#39;s no binary package built for RHEL. So, I&#39;ll need to build it myself from source. But we need ghc to compile ghc, and to make it worse, we need a version &amp;gt;= 6.10, and the binaries for these won&#39;t work with libc 2.5 either. So, our approach needs to be:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;Compile and install 6.10.4 using 6.8.3&lt;/li&gt;
+&lt;li&gt;Compile a binary distribution of 7.0.3 using 6.10.4&lt;/li&gt;
+&lt;li&gt;Install the 7.0.3 binary distribution&lt;/li&gt;
+&lt;li&gt;Compile and install the haskell platform 2011.2.0.1&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;But wait, as it turns out, the RHEL 5.6 C compiler (gcc 4.1.2) doesn&#39;t seem to be compatible with recent ghc builds either, giving errors like:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;rts/dist/build/RtsStartup.dyn_o: relocation R_X86_64_PC32 against `StgRun&amp;#39; can
+not be used when making a shared object; recompile with -fPIC&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;(there are some details on the &lt;a href=&quot;http://hackage.haskell.org/trac/ghc/wiki/Building/Troubleshooting&quot;&gt;building and troubleshooting ghc page&lt;/a&gt;) So, you need a more recent gcc also. I could have build this from source also, but luckily I had a working gcc 4.4.3 build already present. For reference, I needed to download:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;ghc-6.10.4-src.tar.bz2&lt;/li&gt;
+&lt;li&gt;ghc-6.8.3-x86_64-unknown-linux.tar.bz2&lt;/li&gt;
+&lt;li&gt;ghc-7.0.3-src.tar.bz2&lt;/li&gt;
+&lt;li&gt;haskell-platform-2011.2.0.1.tar.gz&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;And here&#39;s the commands used:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;# General setup
+# Assumes downloaded files are in $BASE/downloads
+BASE=/tmp/ghc-dev
+GCC443DIR=/opt/gcc4.4.3/bin
+mkdir -p $BASE/install
+mkdir -p $BASE/build
+
+# Start with a 6.8.3 binary
+cd $BASE/build
+tar -xjf $BASE/downloads/ghc-6.8.3-x86_64-unknown-linux.tar.bz2
+export PATH=/usr/bin:/sbin:/bin
+cd $BASE/build/ghc-6.8.3
+./configure --prefix $BASE/install/ghc-6.8.3
+make install
+
+# Build 6.10.4 from src
+cd $BASE/build
+tar -xjf $BASE/downloads/ghc-6.10.4-src.tar.bz2 
+export PATH=$BASE/install/ghc-6.8.3/bin:/usr/sbin:/usr/bin:/sbin:/bin
+cd $BASE/build/ghc-6.10.4
+./configure --prefix $BASE/install/ghc-6.10.4
+make
+make install
+
+# Build 7.0.3 from src, using 6.10.4 and gcc 4.4.3
+# (gcc 4.1.2 from RHEL doesn&amp;#39;t seem to work)
+cd $BASE/build
+tar -xjf $BASE/downloads/ghc-7.0.3-src.tar.bz2 
+export PATH=$BASE/install/ghc-6.10.4/bin:$GCC443DIR:/usr/sbin:/usr/bin:/sbin:/bin
+cd $BASE/build/ghc-7.0.3
+./configure
+make
+make binary-dist
+ 
+# Unpack and install the 7.0.3 bin-dist
+cd /tmp
+rm -rf /tmp/ghc-7.0.3
+tar -xjf $BASE/build/ghc-7.0.3/ghc-7.0.3-x86_64-unknown-linux.tar.bz2
+cd /tmp/ghc-7.0.3
+./configure --prefix $BASE/install/ghc-7.0.3
+make install
+
+# Unpack and install the haskell platform
+cd $BASE/build
+export PATH=$BASE/install/ghc-7.0.3/bin:$GCC443DIR:/usr/sbin:/usr/bin:/sbin:/bin
+tar -xzf $BASE/downloads/haskell-platform-2011.2.0.1.tar.gz
+cd $BASE/build/haskell-platform-2011.2.0.1
+./configure --prefix $BASE/install/ghc-7.0.3
+make
+make install&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Be prepared to chew up some CPU cycles! Pleasingly, once I sorted out the gcc version issue, all of the above worked without problems.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Composable Value Editors</title>
+      <link href="https://tim.dockerz.netposts/2012-05-10-composable-value-editors.html"/>
+      <id>https://tim.dockerz.netposts/2012-05-10-composable-value-editors.html</id>
+      <updated>2012-05-10T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;Graphical User Interfaces (GUIs) in haskell are frustrating. It&#39;s not yet clear what is the cleanest model for fitting GUIs into functional programming. Currently there are two main approaches:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;Various effort at applying Functional Reactive Programming (FRP) to GUIs. These are somewhat experimental, and tend to be proof of concepts implementing a small range of GUI features (several of these libraries are listed &lt;a href=&quot;http://www.haskell.org/haskellwiki/Applications_and_libraries/GUI_libraries#High-level&quot;&gt;here&lt;/a&gt;).&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;The full blown toolkits which provide a comprehensive imperative binding to mainstream toolkits. The two key contenders here are &lt;a href=&quot;http://projects.haskell.org/gtk2hs/&quot;&gt;gtk2hs&lt;/a&gt; and &lt;a href=&quot;http://www.haskell.org/haskellwiki/WxHaskell&quot;&gt;wxHaskell&lt;/a&gt;.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Whilst enticing, the FRP approach doesn&#39;t currently look appropriate for building rich GUI applications. wxHaskell and gtk2hs at least provide the functionality required, but the low level imperative approach based in the IO monad is tedious to a fluent haskell developer. Here&#39;s a code snippet:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;b &amp;lt;- buttonNew
+image &amp;lt;- imageNewFromStock stockAdd IconSizeSmallToolbar
+containerAdd b image
+set b [buttonRelief := ReliefNone]
+on b buttonActivated {
+     ... button activated action ...
+}&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It&#39;s not hard to write this sort of code, but it is tedious, especially considering the amount that is required to build a whole application.&lt;/p&gt;
+&lt;p&gt;This post outlines my experiments to reduce the amount of imperative code required for GUIs, yet retaining compatibility with the imperative toolkits. Initially I&#39;ve been focussed on &quot;value editors&quot; (VEs) aka &quot;forms&quot;. These are GUI components to capture/edit values of ideally arbitrary complexity. I&#39;ve two key goals, composability and abstraction.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Composability&lt;/em&gt;: I want to be able to compose my value editors effortlessly. Whilst the existing toolkits let you compose widgets using containers and glue code, it&#39;s verbose indeed.&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;Abstraction&lt;/em&gt;: I&#39;d like to define my VEs independently from the underlying toolkit. But I&#39;m looking for something more than a thin layer over the existing toolkits. I want to define my VEs in terms of the structure of the values involved, and worry about the formatting and layout later, if at all.&lt;/p&gt;
+&lt;p&gt;If we take this abstraction far enough, it should be possible to reuse our structural VEs definitions beyond gtk2hs and wxWindows. For example, a JSON generator+parser pair can be considered a VE - in the sense that to edit a value, one can generate the json text, edit the text, and then parse to recover the new value. Of course, it&#39;s likely to be a balancing act between abstraction and functionality - we&#39;ll have to see how this pans out.&lt;/p&gt;
+&lt;h1 id=&quot;an-abstract-ui&quot;&gt;An Abstract UI&lt;/h1&gt;
+&lt;p&gt;OK, enough preamble, here&#39;s a GADT I&#39;ve devised to capture VEs:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;-- | A GADT describing abstracted, user interface components for manipulating
+-- values of type a.
+data VE a where
+    -- | A String field
+    Entry :: VE String
+
+    -- | An enumeration. A list of label string are supplied,
+    -- the VE value is the integer index of the selected label.
+    EnumVE :: [String] -&amp;gt; VE Int
+
+    -- | Annotate a VE with a text label
+    Label :: String -&amp;gt; VE a -&amp;gt; VE a
+
+    -- | A &amp;quot;product&amp;quot; VE that combines values from two other VEs
+    AndVE :: (VE a) -&amp;gt; (VE b) -&amp;gt; VE (a,b)
+
+    -- | A &amp;quot;sum&amp;quot; VE that captures the value from either of two other VEs
+    OrVE  :: (VE a) -&amp;gt; (VE b) -&amp;gt; VE (Either a b)
+
+    -- | A VE for manipulating  a list of values. The supplied function lets the
+    -- the VE display the list items to the user (eg for selection).
+    ListVE :: (a-&amp;gt;String) -&amp;gt; VE a -&amp;gt; VE [a]
+
+    -- | Convert a VE over a type a, to a VE over a type b, given
+    -- the necessary mappings. Either String captures the potential
+    -- failure in the mapping.
+    MapVE :: (a -&amp;gt; Either String b) -&amp;gt; (b -&amp;gt; a) -&amp;gt; VE a -&amp;gt; VE b
+
+    -- | Annotate a VE with a default value
+    DefaultVE :: a -&amp;gt; VE a -&amp;gt; VE a
+
+-- A typeclass to build VEs
+class HasVE a where
+  mkVE :: VE a
+
+(.*.) = AndVE
+(.+.) = OrVE
+infixr 5 .*.
+infixr 5 .+.&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And here&#39;s an example usage for a simple data type:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data Gender = Male | Female deriving (Show,Enum)
+
+data Person = Person {
+    st_name :: String,
+    st_age :: Int,
+    st_gender :: Gender
+} deriving (Show)
+
+instance HasVE Person
+  where
+    mkVE = MapVE toStruct fromStruct
+        (   Label &amp;quot;Name&amp;quot; nonEmptyString
+        .*. Label &amp;quot;Age&amp;quot;   mkVE
+        .*. Label &amp;quot;Gender&amp;quot;   mkVE
+        )
+      where
+        toStruct (a,(b,c)) = Right (Person a b c)
+        fromStruct (Person a b c) = (a,(b,c))
+
+nonEmptyString :: VE String
+nonEmptyString = ...
+
+instance HasVE Int ...
+instance HasVE String ...
+instance HasVE Gender ...&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This captures in some sense the abstract semantics for an editor of Person values. We need to capture:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;a non-empty string for the name,&lt;/li&gt;
+&lt;li&gt;an integer for the age&lt;/li&gt;
+&lt;li&gt;a gender enumeration&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;and know how to pack/unpack these into a person value.&lt;/p&gt;
+&lt;h1 id=&quot;a-gtk-ui&quot;&gt;A GTK UI&lt;/h1&gt;
+&lt;p&gt;But what can we do with this? We need to turn this abstruct VE into a concrete UI. There&#39;s a library function to do this for an arbitrary VE:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data GTKWidget a = GTKWidget {
+    ui_widget :: Widget,
+    ui_set :: a -&amp;gt; IO (),
+    ui_get :: IO (ErrVal a),
+    ui_reset :: IO ()
+}
+
+uiGTK  :: VE  a -&amp;gt; IO (GTKWidget a)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The uiGTK function turns our abstract VE a into GTK component for editing a value of type a. In addition to building the compound widget, it gives us functions to:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;put a value into the widget&lt;/li&gt;
+&lt;li&gt;recover a value from the widget&lt;/li&gt;
+&lt;li&gt;restore the widget to a default value&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;A higher level function constructs a modal dialog to get a value of type a from the user.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data ModalDialog e a = ModalDialog {
+    md_dialog :: Dialog,
+    md_gw :: GTKWidget a,
+    md_run :: IO (Maybe a)
+}
+
+modalDialogNew :: String -&amp;gt; VE a -&amp;gt; IO (ModalDialog a)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Hence running this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;dialog &amp;lt;- modalDialogNew &amp;quot;Example 2&amp;quot; (mkVE :: Person)
+ma &amp;lt;- md_run dialog&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Results in this:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2012-05-10-composable-value-editors/example2.png&quot; alt=&quot;Example 2&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;The automatically generated dialog is simple, but quite functional:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;invalid fields have a red background, dynamically updated with each keystroke&lt;/li&gt;
+&lt;li&gt;Fields have sensible defaults - often invalid to force entry from a user&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;More complex UIs are of course possible. As should be clear from the VE GADT above we support sum and product types, lists, etc, and can map these with arbitrary code. Hence we can construct GTK UIs for a very large range of haskell values. A slightly more complex example composes the previous VE:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data Team = Team {
+    t_leader :: Person,
+    t_followers :: [Person]
+} deriving (Show)
+
+instance HasVE Team ...&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Resulting in:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2012-05-10-composable-value-editors/example3.png&quot; alt=&quot;Example 3&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;Recursive types are supported, so its possible to build GTK VEs for expression trees, etc.&lt;/p&gt;
+&lt;h1 id=&quot;json-serialisation&quot;&gt;JSON Serialisation&lt;/h1&gt;
+&lt;p&gt;As I alluded to previously, given VE a, we can automatically generate a JSON generator and parser for values of type a:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data VEJSON a = VEJSON {
+        uj_tojson ::  a -&amp;gt; DA.Value,
+        uj_fromjson :: DA.Value -&amp;gt; Maybe a
+}
+
+uiJSON :: VE ConstE a -&amp;gt; VEJSON a&lt;/code&gt;&lt;/pre&gt;
+&lt;h1 id=&quot;related-work&quot;&gt;Related Work&lt;/h1&gt;
+&lt;p&gt;Well into working on these ideas, I was reminded of two somewhat similar haskell projects: &lt;a href=&quot;http://www.sandr.dds.nl/FunctionalForms/&quot;&gt;Functional Forms&lt;/a&gt; and &lt;a href=&quot;http://www.haskell.org/haskellwiki/TV&quot;&gt;Tangible Values&lt;/a&gt;. Functional Forms aims to ease the creation of wxHaskell dialogs to edit values. The exact purpose Tangeable Values is a little unclear to me, but it appears to be about automatically generating UIs suitable for visualising function behaviour and exploring functional programming.&lt;/p&gt;
+&lt;h1 id=&quot;future-work&quot;&gt;Future Work&lt;/h1&gt;
+&lt;p&gt;Currently I have a library that implements the VE GADT to automatically build GTK editors and JSON serialisers. There&#39;s many ways to progress this work. Some of my ideas follow...&lt;/p&gt;
+&lt;p&gt;Whilst the generated GTK editor is a sensible default, there are only very limited ways in which the editor can be customised. I envisage a model where the uiGTK function takes an extra parameter akin to a style sheet, given extra information controlling the UI layout and formatting, etc.&lt;/p&gt;
+&lt;p&gt;I can envisage many other useful things that could automatically be derived from VE definitions:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;equivalent functionality for wxHaskell&lt;/li&gt;
+&lt;li&gt;console GUIs&lt;/li&gt;
+&lt;li&gt;Funky UIs implemented with primitives more interesting than the standard toolkit widgets: eg zoomable UIs, or UIs more suited to table based platforms.&lt;/li&gt;
+&lt;li&gt;web GUIs. This could be done by automatically generating javascript and corresponding server side haskell code.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Finally, It might be worth investigate whether the &lt;a href=&quot;http://www.haskell.org/haskellwiki/GHC.Generics&quot;&gt;GHC Generic&lt;/a&gt; mechansism might be used to automatically generate VE definitions.&lt;/p&gt;
+&lt;p&gt;So there&#39;s plenty of directions this work can go, but right now I want to put it to the test and build an application!&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Composable Value Editor code</title>
+      <link href="https://tim.dockerz.netposts/2012-09-16-composable-value-editor-code.html"/>
+      <id>https://tim.dockerz.netposts/2012-09-16-composable-value-editor-code.html</id>
+      <updated>2012-09-16T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;I&#39;ve made the code for this library (previously &lt;a href=&quot;2012-05-10-composable-value-editors.html&quot;&gt;described here&lt;/a&gt;) available via a repository on github: &lt;a href=&quot;https://github.com/timbod7/veditor&quot; class=&quot;uri&quot;&gt;https://github.com/timbod7/veditor&lt;/a&gt; It&#39;s still experimental, so I don&#39;t intend to put it on hackage until I have (or someone else has) a dependency on it. The actual VE GADT in the source has an extra type parameter intended to let the generated UIs depend on context. Where this is not necessary, the ConstE type may be supplied. Hence, in the actual code the type &lt;code&gt;VE ConstE a&lt;/code&gt; corresponds to &lt;code&gt;VE a&lt;/code&gt; in the previous blog post.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Data analysis with Monoids</title>
+      <link href="https://tim.dockerz.netposts/2013-05-31-data-analysis-with-monoids.html"/>
+      <id>https://tim.dockerz.netposts/2013-05-31-data-analysis-with-monoids.html</id>
+      <updated>2013-05-31T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;This post expresses the key ideas of a talk I gave at FP-SYD this week.&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://www.haskell.org/ghc/docs/latest/html/libraries/base/Data-Monoid.html&quot;&gt;Monoids&lt;/a&gt; are a pretty simple concept in haskell. Some years ago I learnt of them through the excellent &lt;a href=&quot;http://www.haskell.org/haskellwiki/Typeclassopedia&quot;&gt;Typeclassopedia&lt;/a&gt;, looked at the examples, and understood them quickly (which is more than can be said for many of the new ideas that one learns in haskell). However that was it. Having learnt the idea, I realised that monoids are everywhere in programming, but I&#39;d not found much use for the Monoid typeclass abstraction itself. Recently, I&#39;ve found they can be a useful tool for data analysis...&lt;/p&gt;
+&lt;h2 id=&quot;monoids&quot;&gt;Monoids&lt;/h2&gt;
+&lt;p&gt;First a quick recap. A monoid is a type with a binary operation, and an identity element:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;class Monoid a where
+  mempty :: a
+  mappend :: a -&amp;gt; a -&amp;gt; a&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It must satisfy a simple set of laws, specifically that the binary operation much be associative, and the identity element must actually be the identity for the given operation:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;mappend a (mappend b c) = mappend (mappend a b) c
+mappend mempty x = x
+mappend x mempty = x&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As is hinted by the names of the typeclass functions, lists are an obvious Monoid instance:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;instance Monoid [a] where
+  mempty  = []
+  mappend = (++)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;However, many types can be Monoids. In fact, often a type can be a monoid in multiple ways. Numbers are monoids under both addition and multiplication, with 0 and 1 as their respective identity elements. In the haskell standard libraries, rather than choose one kind of monoid for numbers, newtype declarations are used to given instances for both:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;newtype Sum a = Sum { getSum :: a }
+  deriving (Eq, Ord, Read, Show, Bounded)
+
+instance Num a =&amp;gt; Monoid (Sum a) where
+  mempty = Sum 0
+  Sum x `mappend` Sum y = Sum (x + y)
+
+newtype Product a = Product { getProduct :: a }
+  deriving (Eq, Ord, Read, Show, Bounded)
+
+instance Num a =&amp;gt; Monoid (Product a) where
+  mempty = Product 1
+  Product x `mappend` Product y = Product (x * y)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;We&#39;ve now established and codified the common structure for a few monoids, but it&#39;s not yet clear what it has gained us. The Sum and Product instances are unwieldly - you are unlikely to want to use Sum directly to add two numbers:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Prelude&amp;gt; :m Data.Monoid
+Prelude Data.Monoid&amp;gt; 5+4
+9
+Prelude Data.Monoid&amp;gt; getSum (mappend (Sum 5) (Sum 4))
+9&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Before we progress, however, let&#39;s define a few more monoid instances, potentially useful for data analysis.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data Min a = Min a | MinEmpty deriving (Show)
+           
+data Max a = Max a | MaxEmpty deriving (Show)
+
+newtype Count = Count Int deriving (Show)
+
+instance (Ord a) =&amp;gt; Monoid (Min a) where
+  mempty = MinEmpty
+  mappend MinEmpty m = m
+  mappend m MinEmpty = m
+  mappend (Min a) (Min b) = (Min (P.min a b))
+
+instance (Ord a) =&amp;gt; Monoid (Max a) where
+  mempty = MaxEmpty
+  mappend MaxEmpty m = m
+  mappend m MaxEmpty = m
+  mappend (Max a) (Max b) = (Max (P.max a b))
+
+instance Monoid Count where
+  mempty = Count 0
+  mappend (Count n1) (Count n2) = Count (n1+n2)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Also some helper functions to construct values of all these monoid types:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sum :: (Num a) =&amp;gt; a -&amp;gt; Sum a
+sum = Sum
+
+product :: (Num a) =&amp;gt; a -&amp;gt; Product a
+product = Product
+
+min :: (Ord a) =&amp;gt; a -&amp;gt; Min a
+min = Min
+
+max :: (Ord a) =&amp;gt; a -&amp;gt; Max a
+max = Max
+
+count :: a -&amp;gt; Count
+count _ = Count 1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;These functions are trivial, but they put a consistent interface on creating monoid values. They all have a signature (a -&amp;gt; m) where m is some monoid. For lack of a better name, I&#39;ll call functions with such signatures &quot;monoid functions&quot;.&lt;/p&gt;
+&lt;h2 id=&quot;foldable&quot;&gt;Foldable&lt;/h2&gt;
+&lt;p&gt;It&#39;s time to introduce another typeclass, &lt;a href=&quot;http://www.haskell.org/ghc/docs/latest/html/libraries/base/Data-Foldable.html&quot;&gt;Foldable&lt;/a&gt;. This class abstracts the classic foldr and foldl functions away from lists, making them applicable to arbitrary structures. (There&#39;s a robust debate going on right now about the merits of replacing the list specific fold functions in the standard prelude with the more general versions from Foldable.) Foldable is a large typeclass - here&#39;s the key function of interest to us:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;class Foldable t where
+  ...
+  foldMap :: Monoid m =&amp;gt; (a -&amp;gt; m) -&amp;gt; t a -&amp;gt; m
+  ...&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;foldMap takes a monoid function and a Foldable structure, and reduces the structure down to a single value of the monoid. Lists are, of course, instances of foldable, so we can demo our helper functions:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = [45,23,78,10,11,1]
+*Examples&amp;gt; foldMap count as
+Count 6
+*Examples&amp;gt; foldMap sum as
+Sum {getSum = 168}
+*Examples&amp;gt; foldMap max as
+Max 78&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Notice how the results are all still wrapped with the newtype constructors. We&#39;ll deal with this later.&lt;/p&gt;
+&lt;h2 id=&quot;composition&quot;&gt;Composition&lt;/h2&gt;
+&lt;p&gt;As it turns out, tuples are already instances of Monoids:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;instance (Monoid a,Monoid b) =&amp;gt; Monoid (a,b) where
+  mempty = (mempty,mempty)
+  mappend (a1,b1) (a2,b2) = (mappend a1 a2,mappend b1 b2)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A pair is a monoid if it&#39;s elements are monoids. There are similar instances for longer tuples. We need some helper monoid functions for tuples also:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;a2 :: (a -&amp;gt; b) -&amp;gt; (a -&amp;gt; c) -&amp;gt; a -&amp;gt; (b,c)
+a2 b c = (,) &amp;lt;$&amp;gt; b &amp;lt;*&amp;gt; c
+
+a3 :: (a -&amp;gt; b) -&amp;gt; (a -&amp;gt; c) -&amp;gt; (a -&amp;gt; d) -&amp;gt; a -&amp;gt; (b,c,d)
+a3 b c d = (,,) &amp;lt;$&amp;gt; b &amp;lt;*&amp;gt; c &amp;lt;*&amp;gt; d&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;These are implemented above using &lt;a href=&quot;http://www.haskell.org/ghc/docs/latest/html/libraries/base/Control-Applicative.html&quot;&gt;Applicative&lt;/a&gt; operators, though I&#39;ve given them more restrictive types to make their intended use here clearer. Now I can compose monoid functions:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = [45,23,78,10,11,1]
+*Examples&amp;gt; :t (a2 min max)
+(a2 min max) :: Ord a =&amp;gt; a -&amp;gt; (Min a, Max a)
+*Examples&amp;gt; foldMap (a2 min max) as
+(Min 1,Max 78)
+*Examples&amp;gt; :t (a3 count (a2 min max) (a2 sum product))
+(a3 count (a2 min max) (a2 sum product))
+  :: (Num a, Ord a) =&amp;gt;
+     a -&amp;gt; (Count, (Min a, Max a), (Sum a, Product a))
+*Examples&amp;gt; foldMap (a3 count (a2 min max) (a2 sum product)) as
+(Count 6,(Min 1,Max 78),(Sum {getSum = 168},Product {getProduct = 8880300}))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It&#39;s worth noting here that the composite computations are done in a single traversal of the input list.&lt;/p&gt;
+&lt;h2 id=&quot;more-complex-calculations&quot;&gt;More complex calculations&lt;/h2&gt;
+&lt;p&gt;Happy with this, I decide to extend my set of basic computations with the arithmetic mean. There is a problem, however. The arithmetic mean doesn&#39;t &quot;fit&quot; as a monoid - there&#39;s no binary operation such that a mean for a combined set of data can be calculated from the mean of two subsets.&lt;/p&gt;
+&lt;p&gt;What to do? Well, the mean is the sum divided by the count, both of which are monoids:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;newtype Mean a = Mean (Sum a,Count) deriving (Show)
+
+instance (Num a) =&amp;gt; Monoid (Mean a) where
+  mempty = Mean mempty
+  mappend (Mean m1) (Mean m2) = Mean (mappend m1 m2)
+
+mean v = Mean (Sum v,Count 1)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So I can calculate the mean if I am prepared to do a calculation after the foldMap:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = [45,23,78,10,11,1.5]
+*Examples&amp;gt; foldMap mean as
+Mean (Sum {getSum = 168.5},Count 6)
+*Examples&amp;gt; let (Mean (Sum t,Count n)) = foldMap mean as in t / fromIntegral n
+28.083333333333332&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&quot;the-aggregation-type-class&quot;&gt;The Aggregation type class&lt;/h2&gt;
+&lt;p&gt;For calculations like &lt;code&gt;mean&lt;/code&gt;, I need something more than a monoid. I need a monoid for accumulating the values, and then, once the accumulation is complete, a postprocessing function to compute the final result. Hence a new typeclass to extend Monoid:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;{-# LANGUAGE TypeFamilies #-}
+
+class (Monoid a) =&amp;gt; Aggregation a where
+  type AggResult a :: *
+  aggResult :: a -&amp;gt; AggResult a&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This makes use of the &lt;a href=&quot;http://www.haskell.org/haskellwiki/GHC/Type_families&quot;&gt;type families ghc extension&lt;/a&gt;. We need this to express the fact that our postprocessing function aggResult has a different return type to the type of the monoid. In the above definition:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;aggResult is a function that gives you the &lt;em&gt;value&lt;/em&gt; of the final result from the &lt;em&gt;value&lt;/em&gt; of the monoid&lt;/li&gt;
+&lt;li&gt;AggResult is a &lt;em&gt;type&lt;/em&gt; function that gives you the &lt;em&gt;type&lt;/em&gt; of the final result from the &lt;em&gt;type&lt;/em&gt; of the monoid&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;We can write an instance of Aggregation for Mean:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;instance (Fractional a) =&amp;gt; Aggregation (Mean a) where
+  type AggResult (Mean a) = a
+  aggResult (Mean (Sum t,Count n)) = t/fromIntegral n&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;and test it out:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = [45,23,78,10,11,1.5]
+*Examples&amp;gt; aggResult (foldMap mean as)
+28.083333333333332
+*Examples&amp;gt; &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Nice. Given that &lt;code&gt;aggResult (foldMap ...)&lt;/code&gt; will be a common pattern, lets write a helper:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;afoldMap :: (Foldable t, Aggregation a) =&amp;gt; (v -&amp;gt; a) -&amp;gt; t v -&amp;gt; AggResult a
+afoldMap f vs = aggResult (foldMap f vs)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;In order to use the monoids we defined before (sum,product etc) we need to define Aggregation instances for them also. Even though they are trivial, it turns out to be useful, as we can make the aggResult function strip off the newtype constructors that were put there to enable the Monoid typeclass:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;instance (Num a) =&amp;gt; Aggregation (Sum a)  where
+  type AggResult (Sum a) = a
+  aggResult (Sum a) = a
+    
+instance (Num a) =&amp;gt; Aggregation (Product a)  where
+  type AggResult (Product a) = a
+  aggResult (Product a) = a
+
+instance (Ord a) =&amp;gt; Aggregation (Min a)  where
+  type AggResult (Min a) = a
+  aggResult (Min a) = a
+
+instance (Ord a) =&amp;gt; Aggregation (Max a)  where
+  type AggResult (Max a) = a
+  aggResult (Max a) = a
+
+instance Aggregation Count where
+  type AggResult Count = Int
+  aggResult (Count n) = n
+
+instance (Aggregation a, Aggregation b) =&amp;gt; Aggregation (a,b) where
+  type AggResult (a,b) = (AggResult a, AggResult b)
+  aggResult (a,b) = (aggResult a, aggResult b)
+
+instance (Aggregation a, Aggregation b, Aggregation c) =&amp;gt; Aggregation (a,b,c) where
+  type AggResult (a,b,c) = (AggResult a, AggResult b, AggResult c)
+  aggResult (a,b,c) = (aggResult a, aggResult b, aggResult c)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is mostly boilerplate, though notice how the tuple instances delve into their components in order to postprocess the results. Now everything fits together cleanly:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = [45,23,78,10,11,1.5]
+*Examples&amp;gt; :t (a3 count (a2 min max) mean)
+(a3 count (a2 min max) mean)
+  :: Ord a =&amp;gt; a -&amp;gt; (Count, (Min a, Max a), Mean a)
+*Examples&amp;gt; afoldMap (a3 count (a2 min max) mean) as
+(6,(1.5,78.0),28.083333333333332)
+*Examples&amp;gt; &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The 4 computations have been calculated all in a single pass over the input list, and the results are free of the type constructors that are no longer required once the aggregation is complete.&lt;/p&gt;
+&lt;p&gt;Another example of an Aggregation where we need to postprocess the result is counting the number of unique items. For this we will keep a set of the items seen, and then return the size of this set at the end:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;newtype CountUnique a = CountUnique (Set.Set a)
+
+instance Ord a =&amp;gt; Monoid (CountUnique a) where
+  mempty = CountUnique Set.empty
+  mappend (CountUnique s1) (CountUnique s2) = CountUnique (Set.union s1 s2)
+
+instance Ord a =&amp;gt; Aggregation (CountUnique a) where
+  type AggResult (CountUnique a) = Int
+  aggResult (CountUnique s1) = Set.size s1
+
+countUnique :: Ord a =&amp;gt; a -&amp;gt; CountUnique a
+countUnique a = CountUnique (Set.singleton a)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;.. in use:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = [5,7,8,7,11,10,11]
+*Examples&amp;gt; afoldMap (a2 countUnique count) as
+(5,7)&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&quot;higher-order-aggregation-functions&quot;&gt;Higher order aggregation functions&lt;/h2&gt;
+&lt;p&gt;All of the calculations seen so far have worked consistently across all values in the source data structure. We can make use of the &lt;code&gt;mempty&lt;/code&gt; monoid value in order to filter our data set, and or aggregate in groups. Here&#39;s a couple of higher order monoid functions for this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;afilter :: Aggregation m =&amp;gt; (a -&amp;gt; Bool) -&amp;gt; (a -&amp;gt; m) -&amp;gt; (a -&amp;gt; m)
+afilter match mf = \a -&amp;gt; if match a then mf a else mempty
+
+newtype MMap k v = MMap (Map.Map k v)
+  deriving Show
+
+instance (Ord k, Monoid v) =&amp;gt; Monoid (MMap k v) where
+  mempty = MMap (Map.empty)
+  mappend (MMap m1) (MMap m2) = MMap (Map.unionWith mappend m1 m2)
+
+instance (Ord k, Aggregation v) =&amp;gt; Aggregation (MMap k v) where
+  type AggResult (MMap k v) = Map.Map k (AggResult v)
+  aggResult (MMap m) = Map.map aggResult m
+
+groupBy :: (Ord k, Aggregation m) =&amp;gt; (a -&amp;gt; k) -&amp;gt; (a -&amp;gt; m) -&amp;gt; (a -&amp;gt; MMap k m)
+groupBy keyf valuef = \a -&amp;gt; MMap (Map.singleton (keyf a) (valuef a))&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;afilter&lt;/code&gt; restricts the application of a monoid function to a subset of the input data. eg to calculate the sum of all the values, and the sum of values less than 20:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = [5,10,20,45.4,35,1,3.4]
+*Examples&amp;gt; afoldMap (a2 sum (afilter (&amp;lt;=20) sum)) as
+(119.8,39.4)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;&lt;code&gt;groupBy&lt;/code&gt; takes a key function and a monoid function. It partitions the data set using the key function, and applies a monoid function to each subset, returning all of the results in a map. Non-numeric data works better as an example here. Let&#39;s take a set of words as input, and for each starting letter, calculate the number of words with that letter, the length of the shortest word, and and the length of longest word:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let as = words &amp;quot;monoids are a pretty simple concept in haskell some years ago i learnt of them through the excellent typeclassopedia looked at the examples and understood them straight away which is more than can be said for many of the new ideas that one learns in haskell&amp;quot;
+*Examples&amp;gt; :t groupBy head (a3 count (min.length) (max.length))
+groupBy head (a3 count (min.length) (max.length))
+  :: Ord k =&amp;gt; [k] -&amp;gt; MMap k (Count, Min Int, Max Int)
+*Examples&amp;gt; afoldMap (groupBy head (a3 count (min.length) (max.length))) as
+fromList [(&amp;#39;a&amp;#39;,(6,1,4)),(&amp;#39;b&amp;#39;,(1,2,2)),(&amp;#39;c&amp;#39;,(2,3,7)),(&amp;#39;e&amp;#39;,(2,8,9)),(&amp;#39;f&amp;#39;,(1,3,3)),(&amp;#39;h&amp;#39;,(2,7,7)),(&amp;#39;i&amp;#39;,(5,1,5)),(&amp;#39;l&amp;#39;,(3,6,6)),(&amp;#39;m&amp;#39;,(3,4,7)),(&amp;#39;n&amp;#39;,(1,3,3)),(&amp;#39;o&amp;#39;,(3,2,3)),(&amp;#39;p&amp;#39;,(1,6,6)),(&amp;#39;s&amp;#39;,(4,4,8)),(&amp;#39;t&amp;#39;,(9,3,15)),(&amp;#39;u&amp;#39;,(1,10,10)),(&amp;#39;w&amp;#39;,(1,5,5)),(&amp;#39;y&amp;#39;,(1,5,5))]&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Many useful data analysis functions can be written through simple function application and composition using these primitive monoid functions, the product combinators a2 and a3 and these new filtering and grouping combinators.&lt;/p&gt;
+&lt;h2 id=&quot;disk-based-data&quot;&gt;Disk-based data&lt;/h2&gt;
+&lt;p&gt;As pointed out before, regardless of the complexity of the computation, it&#39;s done with a single traversal of the input data. This means that we don&#39;t need to limit ourselves to lists and other in memory Foldable data structures. Here&#39;s a function similar to foldMap, but that works over the lines in a file:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;foldFile :: Monoid m =&amp;gt; FilePath -&amp;gt; (BS.ByteString -&amp;gt; Maybe a) -&amp;gt; (a -&amp;gt; m) -&amp;gt; IO m
+foldFile fpath pf mf = do
+  h &amp;lt;- openFile fpath ReadMode
+  m &amp;lt;- loop h mempty
+  return m
+  where
+    loop h m = do
+      eof &amp;lt;- hIsEOF h
+      if eof
+        then (return m)
+        else do
+          l &amp;lt;- BS.hGetLine h
+          case pf l of
+            Nothing -&amp;gt; loop h m
+            (Just a) -&amp;gt; let m&amp;#39; = mappend m (mf a)
+                        in loop h m&amp;#39;
+
+afoldFile :: Aggregation m =&amp;gt; FilePath -&amp;gt; (BS.ByteString -&amp;gt; Maybe a) -&amp;gt; (a -&amp;gt; m) -&amp;gt; IO (AggResult m)
+afoldFile fpath pf mf = fmap aggResult (foldFile fpath pf mf)&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;foldFile take two parameters - a function to parse each line of the file, the other is the monoid function to do the aggregation. Lines that fail to parse are skipped. (I can here questions in the background &quot;What about strictness and space leaks?? - I&#39;ll come back to that). As an example usage of aFoldFile, I&#39;ll analyse some stock data. Assume that I have it in a CSV file, and I&#39;ve got a function to parse one CSV line into a sensible data value:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import qualified Data.ByteString.Char8 as BS
+import Data.Time.Calendar
+
+data Prices = Prices {
+  pName :: String,          -- The stock code
+  pDate :: Day,             -- The historic date
+  pOpen :: Double,          -- The price at market open
+  pHigh :: Double,          -- The highest price on the date
+  pLow :: Double,           -- The lowest price on the date
+  pClose :: Double,         -- The price at market close
+  pVolume :: Double         -- How many shares were traded
+  } deriving (Show)
+
+  parsePrices :: BS.ByteString -&amp;gt; Maybe Prices
+  parsePrices = ...&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Now I can use my monoid functions to analyse the file based data. How many google prices do I have, over what date range:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;*Examples&amp;gt; let stats =  afilter ((&amp;quot;GOOG&amp;quot;==).pName) (a3 count (min.pDate) (max.pDate))
+*Examples&amp;gt; :t stats
+stats
+  :: Prices
+     -&amp;gt; (Count,
+         Min time-1.4:Data.Time.Calendar.Days.Day,
+         Max time-1.4:Data.Time.Calendar.Days.Day)
+*Examples&amp;gt; afoldFile &amp;quot;prices.csv&amp;quot; parsePrices stats
+(1257,2008-05-29,2013-05-24)
+*Examples&amp;gt; &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Perhaps I want to aggregate my data per month, getting traded price range and total volume. We need a helper function to work out the month of each date:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;startOfMonth :: Day -&amp;gt; Day
+startOfMonth t = let (y,m,d) = toGregorian t
+                 in fromGregorian y m 1&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And then we can use groupBy to collect data monthly:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;:*Examples&amp;gt; let stats =  afilter ((&amp;quot;GOOG&amp;quot;==).pName) (groupBy (startOfMonth.pDate) (a3 (min.pLow) (max.pHigh) (sum.pVolume)))
+*Examples&amp;gt; :t stats
+stats
+  :: Prices
+     -&amp;gt; MMap
+          time-1.4:Data.Time.Calendar.Days.Day
+          (Min Double, Max Double, Sum Double)
+*Examples&amp;gt; results &amp;lt;- afoldFile &amp;quot;prices.csv&amp;quot; parsePrices stats
+*Examples&amp;gt; mapM_ print (Map.toList results)
+(2008-05-01,(573.2,589.92,8073107.0))
+(2008-06-01,(515.09,588.04,9.3842716e7))
+(2008-07-01,(465.6,555.68,1.04137619e8))
+...
+(2013-03-01,(793.3,844.0,4.2559856e7))
+(2013-04-01,(761.26,827.64,5.3574633e7))
+(2013-05-01,(816.36,920.6,4.1080028e7))&lt;/code&gt;&lt;/pre&gt;
+&lt;h2 id=&quot;conclusion&quot;&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;So, I hope I&#39;ve shown that monoids are useful indeed. They can form the core of a framework for cleanly specifing quite complex data analysis tasks.&lt;/p&gt;
+&lt;p&gt;An additional typeclass which I called &quot;Aggregation&quot; extends Monoid and provides for a broader range of computations and also cleaner result types (thanks to type families). There was some discussion when I presented this talk as to whether a single method typeclass like Aggregation was a &quot;true&quot; abstraction, given it has no associated laws. This is a valid point, however using it simplifies the syntax and usage of monoidal calculations significantly, and for me, this makes it worth having.&lt;/p&gt;
+&lt;p&gt;There remains an elephant in the room, however, and this is space leakage. Lazy evalulation means that, as written, most of the calculations shown run in space proportional to the input data set. Appropriate strictness annotations and related modifications will fix this, but it turns out to be slightly irritating. This blog post is already long enough, so I&#39;ll address space leaks in in a subsequent post...&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Cabal version consistency</title>
+      <link href="https://tim.dockerz.netposts/2013-11-04-cabal-version-consistency.html"/>
+      <id>https://tim.dockerz.netposts/2013-11-04-cabal-version-consistency.html</id>
+      <updated>2013-11-04T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;Thanks to some great work done over the google summer of code, the &lt;a href=&quot;https://github.com/timbod7/haskell-chart/wiki&quot;&gt;chart library&lt;/a&gt; has gained much new functionality over the last 6 months. A consequence of this is that it has gained plenty of dependencies on other software. Furthermore, where the library previously had 2 cabal files to build the system, it now has 4. It&#39;s important the the versioning of dependencies is consistent across these cabal files, but manually checking is tedious. As best I could tell there is not yet a tool to facilitate this.&lt;/p&gt;
+&lt;p&gt;Hence, I spend a little time learning about the cabal API, and wrote a short script that:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;reads several cabal files specified on the command line&lt;/li&gt;
+&lt;li&gt;merges these into one overall set of dependencies&lt;/li&gt;
+&lt;li&gt;displays the depencies in such a way that inconsistent version constrains are obvious&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Here&#39;s some example output:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;$ runghc ~/repos/merge-cabal-deps/mergeCabalDeps.hs `find . -name &amp;#39;*.cabal&amp;#39;`
+* loaded Chart-gtk-1.1
+* loaded Chart-1.1
+* loaded Chart-tests-1.1
+* loaded Chart-cairo-1.1
+* loaded Chart-diagrams-1.1
+Chart:
+    &amp;gt;=1.1 &amp;amp;&amp;amp; &amp;lt;1.2 (Chart-cairo,Chart-diagrams,Chart-gtk,Chart-tests)
+Chart-cairo:
+    &amp;gt;=1.1 &amp;amp;&amp;amp; &amp;lt;1.2 (Chart-gtk,Chart-tests)
+Chart-diagrams:
+    &amp;gt;=1.1 &amp;amp;&amp;amp; &amp;lt;1.2 (Chart-tests)
+Chart-gtk:
+    &amp;gt;=1.1 &amp;amp;&amp;amp; &amp;lt;1.2 (Chart-tests)
+SVGFonts:
+    &amp;gt;=1.4 &amp;amp;&amp;amp; &amp;lt;1.5 (Chart-diagrams)
+array:
+    -any (Chart,Chart-cairo,Chart-gtk,Chart-tests)
+base:
+    &amp;gt;=3 &amp;amp;&amp;amp; &amp;lt;5 (Chart,Chart-cairo,Chart-diagrams,Chart-gtk,Chart-tests)
+blaze-svg:
+    &amp;gt;=0.3.3 (Chart-diagrams,Chart-tests)
+bytestring:
+    &amp;gt;=0.9 &amp;amp;&amp;amp; &amp;lt;1.0 (Chart-diagrams,Chart-tests)
+cairo:
+    &amp;gt;=0.9.11 (Chart-cairo,Chart-gtk,Chart-tests)
+colour:
+    &amp;gt;=2.2.0 (Chart-diagrams)
+    &amp;gt;=2.2.1 &amp;amp;&amp;amp; &amp;lt;2.4 (Chart,Chart-cairo,Chart-gtk,Chart-tests)
+containers:
+    &amp;gt;=0.4 &amp;amp;&amp;amp; &amp;lt;0.6 (Chart-diagrams,Chart-tests)
+data-default-class:
+    &amp;lt;0.1 (Chart,Chart-cairo,Chart-diagrams,Chart-tests)
+diagrams-cairo:
+    &amp;gt;=0.7 &amp;amp;&amp;amp; &amp;lt;0.8 (Chart-tests)
+diagrams-core:
+    &amp;gt;=0.7 &amp;amp;&amp;amp; &amp;lt;0.8 (Chart-diagrams,Chart-tests)
+diagrams-lib:
+    &amp;gt;=0.7 &amp;amp;&amp;amp; &amp;lt;0.8 (Chart-diagrams,Chart-tests)
+...
+$ &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;As should be evident, all of the imported cabal packages are referenced with consistent version constraints except for colour (which is lacking an upper bound in Chart-diagrams).&lt;/p&gt;
+&lt;p&gt;The script is pretty straightforward:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import Control.Monad
+import Data.List(intercalate)
+import System.Environment(getArgs)
+
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+
+import Distribution.Package
+import Distribution.Version
+import Distribution.Verbosity
+import Distribution.Text(display)
+import Distribution.PackageDescription
+import Distribution.PackageDescription.Parse
+import Distribution.PackageDescription.Configuration
+
+type VersionRangeS = String
+
+type DependencyMap = Map.Map PackageName (Map.Map VersionRangeS (Set.Set PackageName))
+
+getDependencyMap :: PackageDescription -&amp;gt; DependencyMap
+getDependencyMap pd = foldr f Map.empty (buildDepends pd)
+  where
+    f :: Dependency -&amp;gt; DependencyMap  -&amp;gt; DependencyMap
+    f (Dependency p vr) = Map.insert p (Map.singleton (display vr) (Set.singleton (pkgName (package pd))))
+
+printMergedDependencies :: [PackageDescription] -&amp;gt; IO ()
+printMergedDependencies pds = do
+  forM_ (Map.toList dmap) $ \(pn,versions) -&amp;gt; do
+    putStrLn (display pn ++ &amp;quot;:&amp;quot;)
+    forM_ (Map.toList versions) $ \(version,pnset) -&amp;gt; do
+       putStrLn (&amp;quot;    &amp;quot; ++ version ++ &amp;quot; (&amp;quot; ++ intercalate &amp;quot;,&amp;quot; (map display (Set.toList pnset)) ++ &amp;quot;)&amp;quot;)
+  where
+    dmap :: DependencyMap
+    dmap = Map.unionsWith (Map.unionWith Set.union) (map getDependencyMap pds)
+
+scanPackages :: [FilePath] -&amp;gt; IO ()
+scanPackages fpaths = do
+    pds &amp;lt;- mapM loadPackageDescription fpaths
+    printMergedDependencies pds
+  where
+    loadPackageDescription path = do
+      pd &amp;lt;- fmap flattenPackageDescription (readPackageDescription silent path)
+      putStrLn (&amp;quot;* loaded &amp;quot; ++ display (package pd))
+      return pd
+
+main = getArgs &amp;gt;&amp;gt;= scanPackages      &lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I&#39;d be interested in other tools used for managing suites of cabal configurations.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Teenage haskell</title>
+      <link href="https://tim.dockerz.netposts/2014-06-26-teenage-haskell.html"/>
+      <id>https://tim.dockerz.netposts/2014-06-26-teenage-haskell.html</id>
+      <updated>2014-06-26T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;I&#39;ve been inspired by the efforts of others (&lt;a href=&quot;http://cdsmith.wordpress.com/2011/08/16/haskell-for-kids-week-1/&quot;&gt;Chris Smith&lt;/a&gt;, &lt;a href=&quot;http://justtesting.org/post/70871612766/lets-program&quot;&gt;Manuel Chakravarty&lt;/a&gt;) to try teaching children haskell as a first experience of programming. Haskell has a reputation of being a &quot;hard&quot; language, but I suspect this stems from the challenges faced by software developers transitioning from an imperative programming paradigm to a functional one. There&#39;s anecdotal evidence that, for first steps into programming, a functional programming language may be easier for many students, and allow a class to focus more quickly on interesting aspects of programming.&lt;/p&gt;
+&lt;p&gt;With any group of beginners, and especially children, simple tooling is really important. Being able to run examples in minutes of turning on the computer is really important. But running even the simplest of traditional toolchains requires at least a rudimentary understanding of:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;a text editor&lt;/li&gt;
+&lt;li&gt;the file system&lt;/li&gt;
+&lt;li&gt;a command line&lt;/li&gt;
+&lt;li&gt;an interpreter/compiler&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;And there&#39;s platform issues here also - even when the language is platform independent the other items will vary. It would be very easy to get bogged down in all this well before actually writing a program that does something interesting...&lt;/p&gt;
+&lt;p&gt;Hence I was excited several weeks ago when Chris &lt;a href=&quot;http://cdsmith.wordpress.com/2014/06/03/codeworld-rises-again/&quot;&gt;announced the reimplementation&lt;/a&gt; of his codeworld environment. In a nutshell, it&#39;s a web site where:&lt;/p&gt;
+&lt;p&gt;1) you edit haskell code in your browser 2) it gets compiled to java script on the remote server using ghcjs 3) the javascript runs back in the browser&lt;/p&gt;
+&lt;p&gt;and it comes with a &lt;a href=&quot;http://codeworld.info/doc/Prelude.html&quot;&gt;beginner-friendly prelude&lt;/a&gt; focussed on creating pictures, animations, and simple games (no monads required!).&lt;/p&gt;
+&lt;p&gt;This was just in time for school holidays here in Sydney - my own children to be my &quot;guinea pig&quot; students. Nick (aged 14) is in year 9 at school, whereas Sam (aged 12) is in year 7. At school they have covered simple algebra, number planes, and other math ripe to be used for something more fun than drill exercises! They have a younger brother Henry (aged 10), who has being observing with interest.&lt;/p&gt;
+&lt;p&gt;Our goal is to learn to draw pictures, then move on to animations, and, further down the track (if we get there) write some games. After a couple of 2 hour sessions, it has gone remarkably well.&lt;/p&gt;
+&lt;p&gt;So what have we done? Here&#39;s a short outline of our two sessions so far:&lt;/p&gt;
+&lt;h2 id=&quot;session-1-25-hours&quot;&gt;Session 1 (2.5 hours):&lt;/h2&gt;
+&lt;p&gt;We discussed the nature of computers, programming languages, compilers.&lt;/p&gt;
+&lt;p&gt;We launched the codeworld environment, and played with the demos. We tried changing them, mostly by adjusting various constants, and found they broke in often entertaining ways.&lt;/p&gt;
+&lt;p&gt;We typed in a trivial 2 line program to draw a circle, and made it work. We observed how problems were reported in the log window.&lt;/p&gt;
+&lt;p&gt;We talked about what a function is, and looked at a few of the builtin functions:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;solidCircle :: Number -&amp;gt; Picture
+color :: Color -&amp;gt; Picture -&amp;gt; Picture
+(&amp;amp;) :: Picture -&amp;gt; Picture -&amp;gt; Picture&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;... and looked at how they can be composed using haskell syntax.&lt;/p&gt;
+&lt;p&gt;Then we played!&lt;/p&gt;
+&lt;p&gt;After this, we introduced some extra functions:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;solidRectangle :: Number -&amp;gt; Number -&amp;gt; Picture
+translate :: Number -&amp;gt; Number -&amp;gt; Picture -&amp;gt; Picture
+rotate :: Number -&amp;gt; Picture -&amp;gt; Picture
+scale :: Number -&amp;gt; Number -&amp;gt; Picture -&amp;gt; Picture&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;which let us draw much more interesting stuff. The rest of this session was spent seeing what cool stuff we could draw with these 7 functions.&lt;/p&gt;
+&lt;p&gt;Nick programmed some abstract art:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2014-06-26-teenage-haskell/art.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;Sam coded up a sheep:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2014-06-26-teenage-haskell/sheep.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;That ended the session, though the boys found some unsupervised time on the computer the next day, when Nick built a castle:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2014-06-26-teenage-haskell/castle.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;and Sam did some virtual surfing:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2014-06-26-teenage-haskell/boards.png&quot; /&gt;&lt;/p&gt;
+&lt;h2 id=&quot;session-2-2-hours&quot;&gt;Session 2 (2 hours):&lt;/h2&gt;
+&lt;p&gt;In the second session, we started by talked about organising code for clarity and reuse.&lt;/p&gt;
+&lt;p&gt;The transformation functions introduced in the previous session caused some confusion when used in combination. We talked about how each primitive worked, and how they combined - the different between rotating and then translating versus translating then rotating was investigated.&lt;/p&gt;
+&lt;p&gt;The boys were keen to move on to animations. I thought we&#39;d leave this for a few sessions, but their enthusiasm overruled. This required that we looked at how to write our own functions for the first time. (In codeworld an animation is a function from time to a picture). This is quite a big step, as we needed to get at least a basic idea of scoping also.&lt;/p&gt;
+&lt;p&gt;Nevertheless we battled on, and got some movement on the screen. It was soon discovered that rotations are the most interesting transform to animate, as you don&#39;t lose you picture elements off the screen as time goes to infinity!&lt;/p&gt;
+&lt;p&gt;Nick and Sam needed more assistance here, but still managed to get some ideas working. I&#39;ve only got single frames of their results. Sam produced his space race:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2014-06-26-teenage-haskell/space-race.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;and Nick made a working clock (which tells the right time if you push the run button at 12 oclock!):&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2014-06-26-teenage-haskell/clock.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;In the next session we are going to have to look at numerical functions in a bit more detail in order to produce more types of animations. Time for some graph paper perhaps...&lt;/p&gt;
+&lt;h2 id=&quot;summary&quot;&gt;Summary&lt;/h2&gt;
+&lt;p&gt;For a beta (alpha?) piece of software, relying on some fairly advanced and new technology, Codeworld works remarkably well. And Chris has plans for it - there&#39;s a long list of proposed enhancements in the github issue tracker, and a mailing list has just been created.&lt;/p&gt;
+&lt;p&gt;Right now the main issue is documentation. It works well with an already haskell-literate tutor. Others may want to wait for the documentation, course guides, etc to be written.&lt;/p&gt;
+&lt;p&gt;If you are a haskell enthusiast, Give it a try!&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>A new charting API</title>
+      <link href="https://tim.dockerz.netposts/2014-09-06-chart-api.html"/>
+      <id>https://tim.dockerz.netposts/2014-09-06-chart-api.html</id>
+      <updated>2014-09-06T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;One of the challenges with building a library like &lt;a href=&quot;https://github.com/timbod7/haskell-chart&quot;&gt;Chart&lt;/a&gt; is the tension between ease of use and flexibility. Users want to produce charts with a minimum of code up front, but later want to refine the details. The chart library addresses this through the use of &quot;defaulted records&quot; using &lt;a href=&quot;https://hackage.haskell.org/package/data-default-class-0.0.1/docs/Data-Default-Class.html&quot;&gt;Data.Default.Class&lt;/a&gt;. Because such records are often nested, we rely on the somewhat intimidating &lt;a href=&quot;https://hackage.haskell.org/package/lens-1.2&quot;&gt;lens&lt;/a&gt; library to modify the default values. We end up with code to create chart elements like this:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sinusoid2 = plot_points_title .~ &amp;quot;fn(x)&amp;quot;
+          $ plot_points_values .~ mydata
+          $ plot_points_style . point_color .~ opaque red
+          $ def&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This is much simpler and cleaner that the corresponding code using native record accessors, but it still has a certain amount of syntactic overhead.&lt;/p&gt;
+&lt;p&gt;I&#39;ve added a simple state monad to the library to further clean up the syntax. The state of the monad is the value being constructed, allowing the use of the monadic lens operators. The above code sample becomes:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;sinusoid2 = execEC $ do
+    plot_points_title .= &amp;quot;fn(x)&amp;quot; 
+    plot_points_values .= mydata
+    plot_points_style . point_color .= opaque red&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;This may seem only a minor syntactic improvement, but it adds up over an typical chart definition.&lt;/p&gt;
+&lt;p&gt;A few other changes further reduce the clutter in charting code:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;A new &lt;a href=&quot;https://hackage.haskell.org/package/Chart-1.3/docs/Graphics-Rendering-Chart-Easy.html&quot;&gt;Easy&lt;/a&gt; module that includes helper functions and key dependencies&lt;/li&gt;
+&lt;li&gt;Simpler &quot;toFile&quot; functions in the rendering backends&lt;/li&gt;
+&lt;li&gt;Automatic sequencing of colours for successive plots&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;All this means that a simple plot can now be a one liner:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import Graphics.Rendering.Chart.Easy
+import Graphics.Rendering.Chart.Backend.Cairo
+
+mydata :: [Double,Double]
+mydata = ...
+
+main = toFile def &amp;quot;test.png&amp;quot; $ plot $ points &amp;quot;lines&amp;quot; mydata&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;But this extends naturally to more complex charts. The code differences between the new stateful API versus the existing API can been seen in &lt;a href=&quot;https://github.com/timbod7/haskell-chart/wiki/example-2&quot;&gt;this example&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The stateful API is available in &lt;a href=&quot;https://hackage.haskell.org/package/Chart&quot;&gt;chart v1.3&lt;/a&gt; It is a thin layer over the existing API - both will be continue to be available in the future.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Haskell on Yosemite (OSX 10.10)</title>
+      <link href="https://tim.dockerz.netposts/2015-02-25-ghc-yosemite.html"/>
+      <id>https://tim.dockerz.netposts/2015-02-25-ghc-yosemite.html</id>
+      <updated>2015-02-25T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;h1 id=&quot;update-2016-05-16&quot;&gt;Update (2016-05-16)&lt;/h1&gt;
+&lt;p&gt;Most of the information below is now out of date. The &lt;a href=&quot;http://docs.haskellstack.org/en/stable/README/&quot;&gt;stack&lt;/a&gt; build tool has made everything &lt;em&gt;much&lt;/em&gt; simpler. Getting started just a case of installing with&lt;/p&gt;
+&lt;div class=&quot;sourceCode&quot; id=&quot;cb1&quot;&gt;&lt;pre class=&quot;sourceCode bash&quot;&gt;&lt;code class=&quot;sourceCode bash&quot;&gt;&lt;span id=&quot;cb1-1&quot;&gt;&lt;a href=&quot;#cb1-1&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;brew&lt;/span&gt; install haskell-stack&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;... and then leaving the management of ghc installations up to stack.&lt;/p&gt;
+&lt;hr /&gt;
+&lt;h1 id=&quot;haskell-on-yosemite-osx-1010&quot;&gt;Haskell on Yosemite (OSX 10.10)&lt;/h1&gt;
+&lt;p&gt;Nearly all my development has been done under linux. Only occasionally have I worked under osx. This is all to change - osx is to be my primary development platform. In the past, my experiences with ghc on osx have been a little fraught. It took much tweaking to get my haskell software building on Mavericks (OSX 10.9). Problems I had included:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;https://ghc.haskell.org/trac/ghc/ticket/8197&quot;&gt;issues&lt;/a&gt; with ghc 7.6 and the xcode c preprocessor&lt;/li&gt;
+&lt;li&gt;manual management of the c dependencies of various packages, and then getting cabal to find them&lt;/li&gt;
+&lt;li&gt;getting gtk to build&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;etc, etc.&lt;/p&gt;
+&lt;p&gt;I&#39;m pleased to discover that things have improved immensely. On a new yosemite machine I&#39;ve set up everything I need for haskell development without significant issues. A combination of 3 things work together:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The &lt;a href=&quot;https://ghcformacosx.github.io&quot;&gt;&quot;ghcformacosx&quot;&lt;/a&gt; minimal distribution&lt;/li&gt;
+&lt;li&gt;The &lt;a href=&quot;http://brew.sh&quot;&gt;brew&lt;/a&gt; OSX package manager&lt;/li&gt;
+&lt;li&gt;Cabal sandboxes&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;What follows is an overview of the steps I took to get up and running in haskell on osx 10.10.&lt;/p&gt;
+&lt;h1 id=&quot;1-install-the-xcode-command-line-tools&quot;&gt;1. Install the xcode command line tools&lt;/h1&gt;
+&lt;p&gt;Everything (including ghc) seems to depend on these.&lt;/p&gt;
+&lt;div class=&quot;sourceCode&quot; id=&quot;cb2&quot;&gt;&lt;pre class=&quot;sourceCode bash&quot;&gt;&lt;code class=&quot;sourceCode bash&quot;&gt;&lt;span id=&quot;cb2-1&quot;&gt;&lt;a href=&quot;#cb2-1&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;xcode-select&lt;/span&gt; --install&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h1 id=&quot;2-install-brew&quot;&gt;2. Install Brew&lt;/h1&gt;
+&lt;p&gt;This is quick and easy, following the instructions on the &lt;a href=&quot;http://brew.sh&quot;&gt;brew homepage&lt;/a&gt;.&lt;/p&gt;
+&lt;h1 id=&quot;3-install-ghcformacosx&quot;&gt;3. Install ghcformacosx&lt;/h1&gt;
+&lt;p&gt;&lt;a href=&quot;https://ghcformacosx.github.io&quot;&gt;&quot;ghcformacosx&quot;&lt;/a&gt; is a &quot;drag and drop&quot; installation of ghc 7.8.4 and cabal 1.22.0.0. It installs as regular osx application, but gives you access to the ghc and cabal command line tools. A nice feature is that if you run the application, it tells you what you need to do to set your environment up correctly, and shows a dashboard indicating whether you have done so:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;2015-02-25-ghc-yosemite/ghcformacosx.png&quot; /&gt;&lt;/p&gt;
+&lt;p&gt;Once this is done you need to bring the local package database up to date:&lt;/p&gt;
+&lt;div class=&quot;sourceCode&quot; id=&quot;cb3&quot;&gt;&lt;pre class=&quot;sourceCode bash&quot;&gt;&lt;code class=&quot;sourceCode bash&quot;&gt;&lt;span id=&quot;cb3-1&quot;&gt;&lt;a href=&quot;#cb3-1&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; update&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;h1 id=&quot;4-use-brew-to-install-some-key-tools-and-libraries&quot;&gt;4. Use brew to install some key tools and libraries&lt;/h1&gt;
+&lt;p&gt;One of my libraries has &lt;a href=&quot;https://hackage.haskell.org/package/pcre-light&quot;&gt;pcre-light&lt;/a&gt; as a transitive dependency. It needs a corresponding c library. Also cairo is the fastest rendering backend for my &lt;a href=&quot;http://hackage.haskell.org/package/Chart&quot;&gt;haskell charting library&lt;/a&gt;, and gtk is necessary if you want to show charts in windows. Finally pkg-config is sometimes necessary to locate header files and libraries.&lt;/p&gt;
+&lt;div class=&quot;sourceCode&quot; id=&quot;cb4&quot;&gt;&lt;pre class=&quot;sourceCode bash&quot;&gt;&lt;code class=&quot;sourceCode bash&quot;&gt;&lt;span id=&quot;cb4-1&quot;&gt;&lt;a href=&quot;#cb4-1&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;brew&lt;/span&gt; install pkg-config&lt;/span&gt;
+&lt;span id=&quot;cb4-2&quot;&gt;&lt;a href=&quot;#cb4-2&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;brew&lt;/span&gt; install pcre&lt;/span&gt;
+&lt;span id=&quot;cb4-3&quot;&gt;&lt;a href=&quot;#cb4-3&quot;&gt;&lt;/a&gt;&lt;/span&gt;
+&lt;span id=&quot;cb4-4&quot;&gt;&lt;a href=&quot;#cb4-4&quot;&gt;&lt;/a&gt;&lt;span class=&quot;co&quot;&gt;# gtk and cairo need xquartz&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb4-5&quot;&gt;&lt;a href=&quot;#cb4-5&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;brew&lt;/span&gt; tap Caskroom/cask&lt;/span&gt;
+&lt;span id=&quot;cb4-6&quot;&gt;&lt;a href=&quot;#cb4-6&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;brew&lt;/span&gt; install Caskroom/cask/xquartz&lt;/span&gt;
+&lt;span id=&quot;cb4-7&quot;&gt;&lt;a href=&quot;#cb4-7&quot;&gt;&lt;/a&gt;&lt;/span&gt;
+&lt;span id=&quot;cb4-8&quot;&gt;&lt;a href=&quot;#cb4-8&quot;&gt;&lt;/a&gt;&lt;span class=&quot;co&quot;&gt;# later steps in the build processes need to find libraries&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb4-9&quot;&gt;&lt;a href=&quot;#cb4-9&quot;&gt;&lt;/a&gt;&lt;span class=&quot;co&quot;&gt;# like xcb-shm via package config. Tell pkg-config&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb4-10&quot;&gt;&lt;a href=&quot;#cb4-10&quot;&gt;&lt;/a&gt;&lt;span class=&quot;co&quot;&gt;# where they are.&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb4-11&quot;&gt;&lt;a href=&quot;#cb4-11&quot;&gt;&lt;/a&gt;&lt;span class=&quot;bu&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;va&quot;&gt;PKG_CONFIG_PATH=&lt;/span&gt;/opt/X11/lib/pkgconfig&lt;/span&gt;
+&lt;span id=&quot;cb4-12&quot;&gt;&lt;a href=&quot;#cb4-12&quot;&gt;&lt;/a&gt;&lt;/span&gt;
+&lt;span id=&quot;cb4-13&quot;&gt;&lt;a href=&quot;#cb4-13&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;brew&lt;/span&gt; install cairo&lt;/span&gt;
+&lt;span id=&quot;cb4-14&quot;&gt;&lt;a href=&quot;#cb4-14&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;brew&lt;/span&gt; install gtk&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;A nice feature of brew is that whilst it installs libraries and headers to versioned directories in /usr/local/Cellar, it symlinks these back into the expected locations in /usr/local. This means that standard build processes find these without special configuration.&lt;/p&gt;
+&lt;h1 id=&quot;5-setup-some-favorite-command-line-tools&quot;&gt;5. Setup some favorite command line tools&lt;/h1&gt;
+&lt;p&gt;I use &lt;a href=&quot;http://johnmacfarlane.net/pandoc/&quot;&gt;pandoc&lt;/a&gt; and &lt;a href=&quot;https://hackage.haskell.org/package/ghc-mod&quot;&gt;ghc-mod&lt;/a&gt; alot, and still need &lt;a href=&quot;http://darcs.net&quot;&gt;darcs&lt;/a&gt; sometimes. Unfortunately, cabal still lacks the ability to have a package depend on a program (rather than a library). Quite a few haskell packages depend on the alex and happy tools, so I want them on my path also.&lt;/p&gt;
+&lt;p&gt;I&#39;m not sure it&#39;s idiomatic on osx, but I continue my linux habit of putting personal command line tools in ~/bin. I like to build all of these tools in a single cabal sandbox, and then link them into ~/bin. Hence, assuming ~/bin is on my path:&lt;/p&gt;
+&lt;div class=&quot;sourceCode&quot; id=&quot;cb5&quot;&gt;&lt;pre class=&quot;sourceCode bash&quot;&gt;&lt;code class=&quot;sourceCode bash&quot;&gt;&lt;span id=&quot;cb5-1&quot;&gt;&lt;a href=&quot;#cb5-1&quot;&gt;&lt;/a&gt;&lt;span class=&quot;bu&quot;&gt;cd&lt;/span&gt; ~/bin&lt;/span&gt;
+&lt;span id=&quot;cb5-2&quot;&gt;&lt;a href=&quot;#cb5-2&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;mkdir&lt;/span&gt; hackage&lt;/span&gt;
+&lt;span id=&quot;cb5-3&quot;&gt;&lt;a href=&quot;#cb5-3&quot;&gt;&lt;/a&gt;&lt;span class=&quot;kw&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bu&quot;&gt;cd&lt;/span&gt; hackage &lt;span class=&quot;kw&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; sandbox init&lt;span class=&quot;kw&quot;&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb5-4&quot;&gt;&lt;a href=&quot;#cb5-4&quot;&gt;&lt;/a&gt;&lt;span class=&quot;kw&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bu&quot;&gt;cd&lt;/span&gt; hackage &lt;span class=&quot;kw&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; sandbox install alex happy&lt;span class=&quot;kw&quot;&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb5-5&quot;&gt;&lt;a href=&quot;#cb5-5&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;ln&lt;/span&gt; -s hackage/.cabal-sandbox/bin/alex&lt;/span&gt;
+&lt;span id=&quot;cb5-6&quot;&gt;&lt;a href=&quot;#cb5-6&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;ln&lt;/span&gt; -s hackage/.cabal-sandbox/bin/happy&lt;/span&gt;
+&lt;span id=&quot;cb5-7&quot;&gt;&lt;a href=&quot;#cb5-7&quot;&gt;&lt;/a&gt;&lt;span class=&quot;kw&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;bu&quot;&gt;cd&lt;/span&gt; hackage &lt;span class=&quot;kw&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; sandbox install pandocc darcs ghc-mod&lt;span class=&quot;kw&quot;&gt;)&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb5-8&quot;&gt;&lt;a href=&quot;#cb5-8&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;ln&lt;/span&gt; -s hackage/.cabal-sandbox/bin/pandoc&lt;/span&gt;
+&lt;span id=&quot;cb5-9&quot;&gt;&lt;a href=&quot;#cb5-9&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;ln&lt;/span&gt; -s hackage/.cabal-sandbox/bin/darcs&lt;/span&gt;
+&lt;span id=&quot;cb5-10&quot;&gt;&lt;a href=&quot;#cb5-10&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;ln&lt;/span&gt; -s hackage/.cabal-sandbox/bin/ghc-mod&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;(In the sequence above I had to make sure that alex and happy were linked onto the PATH before building ghc-mod)&lt;/p&gt;
+&lt;h1 id=&quot;6-build-gtk2hs-in-its-own-sandbox&quot;&gt;6. Build gtk2hs in its own sandbox&lt;/h1&gt;
+&lt;p&gt;The hard work is already done by brew. We can use build gtk2hs following the standard build instructions:&lt;/p&gt;
+&lt;div class=&quot;sourceCode&quot; id=&quot;cb6&quot;&gt;&lt;pre class=&quot;sourceCode bash&quot;&gt;&lt;code class=&quot;sourceCode bash&quot;&gt;&lt;span id=&quot;cb6-1&quot;&gt;&lt;a href=&quot;#cb6-1&quot;&gt;&lt;/a&gt;&lt;span class=&quot;bu&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;va&quot;&gt;PKG_CONFIG_PATH=&lt;/span&gt;/opt/X11/lib/pkgconfig&lt;/span&gt;
+&lt;span id=&quot;cb6-2&quot;&gt;&lt;a href=&quot;#cb6-2&quot;&gt;&lt;/a&gt;&lt;span class=&quot;bu&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;va&quot;&gt;PATH=&lt;/span&gt;.cabal-sandbox/bin:&lt;span class=&quot;va&quot;&gt;$PATH&lt;/span&gt;&lt;/span&gt;
+&lt;span id=&quot;cb6-3&quot;&gt;&lt;a href=&quot;#cb6-3&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;mkdir&lt;/span&gt; gtk2hs&lt;/span&gt;
+&lt;span id=&quot;cb6-4&quot;&gt;&lt;a href=&quot;#cb6-4&quot;&gt;&lt;/a&gt;&lt;span class=&quot;bu&quot;&gt;cd&lt;/span&gt; gtk2hs&lt;/span&gt;
+&lt;span id=&quot;cb6-5&quot;&gt;&lt;a href=&quot;#cb6-5&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; sandbox init&lt;/span&gt;
+&lt;span id=&quot;cb6-6&quot;&gt;&lt;a href=&quot;#cb6-6&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; install gtk2hs-buildtools&lt;/span&gt;
+&lt;span id=&quot;cb6-7&quot;&gt;&lt;a href=&quot;#cb6-7&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; install gtk&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+&lt;p&gt;Note how we need to ensure that the sandbox is on the path, so that the command line tools built in the first call to &lt;code&gt;cabal install&lt;/code&gt; can be found in the second.&lt;/p&gt;
+&lt;h1 id=&quot;summary&quot;&gt;Summary&lt;/h1&gt;
+&lt;p&gt;All in all, this process was much smoother than before. Both ghcformacosx and brew are excellent pieces of work - kudos to their developers. ghc is, of course, as awesome as ever. When used with sandboxes cabal works well (despite the &quot;cabal hell&quot; reputation). However, having to manually resolve dependencies on build tools is tedious, I&#39;d really like to see &lt;a href=&quot;https://github.com/haskell/cabal/issues/220&quot;&gt;this cabal issue&lt;/a&gt; resolved.&lt;/p&gt;
+&lt;h2 id=&quot;update-2015-03-01&quot;&gt;Update [2015-03-01]&lt;/h2&gt;
+&lt;p&gt;One issue cropped up after this post. It turns out that ghc-mod has some &lt;a href=&quot;https://github.com/kazu-yamamoto/ghc-mod/wiki/InconsistentCabalVersions&quot;&gt;constraints on the combinations of ghc and cabal versions&lt;/a&gt;, and unfortunately the combination provided in &lt;a href=&quot;https://ghcformacosx.github.io&quot;&gt;ghcformacosx&lt;/a&gt; is not supported. I worked around this by installing a older version of cabal in ~/bin:&lt;/p&gt;
+&lt;div class=&quot;sourceCode&quot; id=&quot;cb7&quot;&gt;&lt;pre class=&quot;sourceCode bash&quot;&gt;&lt;code class=&quot;sourceCode bash&quot;&gt;&lt;span id=&quot;cb7-1&quot;&gt;&lt;a href=&quot;#cb7-1&quot;&gt;&lt;/a&gt;&lt;span class=&quot;bu&quot;&gt;cd&lt;/span&gt; ~/bin/hackage&lt;/span&gt;
+&lt;span id=&quot;cb7-2&quot;&gt;&lt;a href=&quot;#cb7-2&quot;&gt;&lt;/a&gt;&lt;span class=&quot;ex&quot;&gt;cabal&lt;/span&gt; install --constraint &lt;span class=&quot;st&quot;&gt;&amp;quot;Cabal &amp;lt; 1.22&amp;quot;&lt;/span&gt; cabal-install&lt;/span&gt;
+&lt;span id=&quot;cb7-3&quot;&gt;&lt;a href=&quot;#cb7-3&quot;&gt;&lt;/a&gt;&lt;span class=&quot;bu&quot;&gt;cd&lt;/span&gt; ~/bin&lt;/span&gt;
+&lt;span id=&quot;cb7-4&quot;&gt;&lt;a href=&quot;#cb7-4&quot;&gt;&lt;/a&gt;&lt;span class=&quot;fu&quot;&gt;ln&lt;/span&gt; -s hackage/.cabal-sandbox/bin/cabal&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>An executable specification for voteflux</title>
+      <link href="https://tim.dockerz.netposts/2016-05-16-voteflux-spec.html"/>
+      <id>https://tim.dockerz.netposts/2016-05-16-voteflux-spec.html</id>
+      <updated>2016-05-16T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;&lt;a href=&quot;https://voteflux.org/&quot;&gt;voteflux&lt;/a&gt; is an interesting new political party, that will field senate candidates at the Australian federal election in July. It&#39;s sole policy is to implement &lt;a href=&quot;https://en.wikipedia.org/wiki/Delegative_democracy&quot;&gt;delegative democracy&lt;/a&gt;, and to do this within the existing Australian political system. It intends to use blockchain technology to provide cryptographic guarantees to the voting process.&lt;/p&gt;
+&lt;p&gt;At the time of writing the voteflux software is incomplete, and there is not yet a rigorous specification for how the voting system will work. The voteflux website explains the system at a high level, but leaves questions unanswered. Discussions in the group&#39;s slack forums fill in some details, and the parties founders have answered some questions of my own.&lt;/p&gt;
+&lt;p&gt;In an effort to improve my own understanding of the voteflux ideas, and provide a basis for discussion with others, I&#39;ve attempted to write an &lt;a href=&quot;https://github.com/timbod7/flux-model&quot;&gt;executable specification&lt;/a&gt; for the system in Haskell. All of the key logic is in &lt;a href=&quot;https://github.com/timbod7/flux-model/blob/master/src/Flux.hs&quot;&gt;Flux.hs&lt;/a&gt;. This was a worthwhile exercise - having to write concrete types and corresponding code made me consider many questions which weren&#39;t apparent when thinking less rigourously. Going forward, I intend to build some simulations based upon this code.&lt;/p&gt;
+&lt;p&gt;Note that this code has no endorsement from the voteflux party - it represents my own efforts to understand the proposed system. But I like their plans, and hope they do well in the election.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Algebraic Data Types in Java</title>
+      <link href="https://tim.dockerz.netposts/2017-11-14-adl-java.html"/>
+      <id>https://tim.dockerz.netposts/2017-11-14-adl-java.html</id>
+      <updated>2017-11-14T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;At &lt;a href=&quot;http://www.helixta.com.au/&quot;&gt;Helix&lt;/a&gt; we often code backend services in java. I find modern java &lt;em&gt;acceptable&lt;/em&gt; as a language for getting things done. As a long time haskell developer, however, I find java&#39;s facilities for data types frustrating indeed. These frustrations are twofold. Java lacks support for algebraic data types (&lt;a href=&quot;https://en.wikipedia.org/wiki/Algebraic_data_type&quot;&gt;ADTs&lt;/a&gt;), and requires large amounts of boilerplate to define even simple types.&lt;/p&gt;
+&lt;p&gt;When designing systems, I place great value in applying the &quot;make illegal states unrepresentable&quot; principle[^1]. Using ADTs to more accurately model data is a excellent step in this direction. However, it&#39;s a burden to do in languages like java that lack support for &lt;a href=&quot;https://en.wikipedia.org/wiki/Tagged_union&quot;&gt;sum types&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Even for regular product types (ie records of fields) java can be tedious. Defining a record of a few fields should really only take a corresponding few lines of code. Yet for a useful value type in java one will generally need to write: constructors, accessors, a comparison function, a hash implementation, serialisation logic etc. It&#39;s common in the java world to use IDEs to automatically generate this kind of boilerplate, but subtle bugs can creep in over time as the once generated code isn&#39;t manually updated to reflect subsequent changes in the data model.&lt;/p&gt;
+&lt;p&gt;Hence, at Helix we now often use my &lt;a href=&quot;https://github.com/timbod7/adl&quot;&gt;ADL language&lt;/a&gt; to define data types, and generate the corresponding java code from them. As a tiny example, these adl definitions (see complete file &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/haskell/compiler/tests/demo1/input/picture.adl&quot;&gt;here&lt;/a&gt;):&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;    struct Rectangle
+    {
+        Double width;
+        Double height;
+    };
+
+    union Picture
+    {
+        Circle circle;
+        Rectangle rectangle;
+        Vector&amp;lt;Picture&amp;gt; composed;
+        Translated&amp;lt;Picture&amp;gt; translated;
+    };&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;result in the corresponding &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/haskell/compiler/tests/demo1/java-output/adl/picture/Rectangle.java&quot;&gt;Rectangle.java&lt;/a&gt; and &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/haskell/compiler/tests/demo1/java-output/adl/picture/Translated.java&quot;&gt;Picture.java&lt;/a&gt;. These two definitions alone correspond to 280 lines of java code (that you really don&#39;t want to write and maintain). As can be seen in the &lt;code&gt;Translated&amp;lt;&amp;gt;&lt;/code&gt; type, &lt;a href=&quot;https://en.wikipedia.org/wiki/Parametric_polymorphism&quot;&gt;parametric polymorphism&lt;/a&gt; is supported.&lt;/p&gt;
+&lt;p&gt;I find that being able to define data types concisely encourages me to build more accurate data models, resulting in systems that are more robust and better reflect the problem domain. And ADL&#39;s multi language support (&lt;a href=&quot;https://github.com/timbod7/adl/blob/master/doc/backend-java.md&quot;&gt;java&lt;/a&gt;, &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/doc/backend-haskell.md&quot;&gt;haskell&lt;/a&gt;, &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/doc/backend-typescript.md&quot;&gt;typescript&lt;/a&gt;) allows us to easily serialize and transfer the corresponding data values between our java services, and our typescript web and mobile UIs.&lt;/p&gt;
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Using ADL from haskell</title>
+      <link href="https://tim.dockerz.netposts/2019-09-17-hadl-haskell.html"/>
+      <id>https://tim.dockerz.netposts/2019-09-17-hadl-haskell.html</id>
+      <updated>2019-09-17T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        &lt;p&gt;The &lt;a href=&quot;https://github.com/timbod7/adl&quot;&gt;ADL&lt;/a&gt; system has proven valuable at &lt;a href=&quot;https://www.helixta.com.au/&quot;&gt;Helix&lt;/a&gt;. We use it in most of our projects, as a strongly typed schema language for specifying:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;http apis (in lieu of &lt;a href=&quot;https://swagger.io/specification/&quot;&gt;openapi/swagger&lt;/a&gt;)&lt;/li&gt;
+&lt;li&gt;database schemas (in lieu of sql)&lt;/li&gt;
+&lt;li&gt;configuration files&lt;/li&gt;
+&lt;li&gt;user interface forms&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;and then as the base for code generation in haskell, java, rust, c++ and typescript.&lt;/p&gt;
+&lt;p&gt;But, because ADL has a variety of uses, the path to getting started can be unclear. As a small stand alone example, this post shows how ADL can be used to specify the syntax of a &lt;a href=&quot;https://en.wikipedia.org/wiki/YAML&quot;&gt;yaml&lt;/a&gt; configuration file, and automate its parsing into haskell.&lt;/p&gt;
+&lt;p&gt;To follow along with this project, you&#39;ll need the ADL compiler &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/docs/install.md&quot;&gt;installed&lt;/a&gt; and on your shell PATH.&lt;/p&gt;
+&lt;p&gt;We&#39;ll assume that our project is some sort of server which will load a yaml configuration at startup. Jumping right in, we can specify the config schema in a file &lt;code&gt;adl/config.adl&lt;/code&gt;:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;module config {
+
+struct ServerConfig {
+  Int32 port;
+  Protocol protocol = &amp;quot;http&amp;quot;;
+  LogLevel logLevel = &amp;quot;info&amp;quot;;
+};
+
+union Protocol {
+  Void http;
+  SslConfiguration https;
+};
+
+struct SslConfiguration {
+  FilePath certificate;
+  FilePath certificateKey;
+};
+
+type FilePath = String;
+
+union LogLevel {
+  Void error;
+  Void warn;
+  Void info;
+  Void debug;
+  Void trace;
+};
+
+};&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Being minimal, our &lt;code&gt;ServerConfig&lt;/code&gt; has a port, some protocol information, and a logging level. The port has no default value, so is required in the configuration. The other fields are optional, with the given defaults being used in their absence. Note the protocol field is a union (aka a sum type). If it is &lt;code&gt;http&lt;/code&gt; then no other information is required. However, if the protocol is &lt;code&gt;https&lt;/code&gt; then paths for ssl certificate details are required. The full syntax and meaning of ADL is in the &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/docs/language.md&quot;&gt;language documentation&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;We&#39;ve specified the data type for the server configuration, and we could now run the compiler to generate the corresponding haskell types and support code. The compiler does its best to generate idiomatic code in the target languages, but additional language specific information can improve the generated code. &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/docs/language.md#annotations&quot;&gt;ADL annotations&lt;/a&gt; are used for this. Such annotations can be included in-line in the adl source code, though this get a little noisy when annotations are included for multiple targets - it gets hard to see the core type definitions themselves in a sea of annotations.&lt;/p&gt;
+&lt;p&gt;Hence ADL has a standard pattern for language specific annotations: such annotations for an ADL file x.adl are kept in the file x.adl-lang. Hence the adl compiler, when reading &lt;code&gt;config.adl&lt;/code&gt; to generate haskell code, will look for and include the adl file &lt;code&gt;config.adl-hs&lt;/code&gt; for haskell related annotations.&lt;/p&gt;
+&lt;p&gt;In this example, &lt;code&gt;config.adl-hs&lt;/code&gt; is straightforward:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;module config {
+
+import adlc.config.haskell.*;
+
+annotation ServerConfig HaskellFieldPrefix &amp;quot;sc_&amp;quot;;
+annotation Protocol HaskellFieldPrefix &amp;quot;p_&amp;quot;;
+annotation SslConfiguration HaskellFieldPrefix &amp;quot;ssl_&amp;quot;;
+annotation LogLevel HaskellFieldPrefix &amp;quot;log_&amp;quot;;
+};&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Recent language extensions notwithstanding, haskell&#39;s record system is somewhat primitive (try a google search for &quot;haskell record problem&quot;). A key issue is that record field names need to be unique in their containing module. To ensure this, by default, the haskell ADL code generator prefixes each field with its type name. Hence the &lt;code&gt;ServerConfig&lt;/code&gt; declaration would generate:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data ServerConfig = ServerConfig
+    { serverConfig_port :: Data.Int.Int32
+    , serverConfig_protocol :: Protocol
+    , serverConfig_logLevel :: LogLevel
+    }&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Whilst this guarantees that the generated code will compile, those field names are unwieldy. Hence the &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/haskell/compiler/lib/adl/adlc/config/haskell.adl#L3&quot;&gt;HaskellFieldPrefix&lt;/a&gt; annotation allows a custom (or no) prefix to be used. With the above &lt;code&gt;config.adl-hs&lt;/code&gt; annotations, we get a more friendly:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;data ServerConfig = ServerConfig
+    { sc_port :: Data.Int.Int32
+    , sc_protocol :: Protocol
+    , sc_logLevel :: LogLevel
+    }&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;With the ADL written it&#39;s time to run the ADL compiler to generate the haskell code:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;adlc haskell \
+  --outputdir src \
+  --package ADL \
+  --rtpackage ADL.Core \
+  --include-rt \
+  --searchdir adl \
+  adl/*.adl&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The &lt;code&gt;--include-rt&lt;/code&gt; and &lt;code&gt;--rtpackage&lt;/code&gt; arguments tell the code generator to include the runtime support files, making the generated code self contained. See the haskell backend &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/docs/backend-haskell.md&quot;&gt;documentation&lt;/a&gt; for details.&lt;/p&gt;
+&lt;p&gt;I generally check the generated code into the source repository. Whilst this approach has some drawbacks, it has benefits too:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;you don&#39;t need the ADL compiler installed to build the package&lt;/li&gt;
+&lt;li&gt;you can build with your off-the shelf standard build system (&lt;a href=&quot;https://www.haskell.org/cabal/&quot;&gt;cabal&lt;/a&gt;, &lt;a href=&quot;https://doc.rust-lang.org/cargo/&quot;&gt;cargo&lt;/a&gt;, &lt;a href=&quot;https://www.typescriptlang.org/docs/handbook/compiler-options.html&quot;&gt;tsc&lt;/a&gt; etc)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The main downside is that changing the source ADL requires explicitly rerunning the ADL compiler. In most projects I have a &lt;code&gt;scripts/generate-adl.sh&lt;/code&gt; script to automate this step. Of course, if your build system is up to it, you may wish to generate the ADL derived code on demand.&lt;/p&gt;
+&lt;p&gt;We can now write some haskell code!&lt;/p&gt;
+&lt;p&gt;ADL&#39;s core serialization schema is json (a alternate binary scheme is planned). In the generated haskell, every ADL value is an instance of the &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/haskell/runtime/src/ADL/Core/Value.hs#L67&quot;&gt;AdlValue&lt;/a&gt; type class, and then the library has helper functions to automate deserialization:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;adlFromByteString :: AdlValue a =&amp;gt; LBS.ByteString -&amp;gt; ParseResult a
+adlFromJsonFile :: AdlValue a =&amp;gt; FilePath -&amp;gt; IO (ParseResult a)
+decodeAdlParseResult :: AdlValue a =&amp;gt; T.Text -&amp;gt; ParseResult a -&amp;gt; Either T.Text a&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If one wished to have a configuration file in json format, the latter two functions are sufficient to read and parse such a file. But json is less than ideal for human written configuration, due to its lack of support for comments, and its rigid syntax. The ADL core doesn&#39;t have yaml support, but conveniently the haskell &lt;a href=&quot;http://hackage.haskell.org/package/yaml&quot;&gt;Data.Yaml&lt;/a&gt; package can parse yaml into json values, which the ADL core can then parse into ADL values. This is the approach we will take, and we write a yaml specific function to load an arbitrary ADL value:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as T
+import qualified Data.Yaml as Y
+import ADL.Core(runJsonParser, decodeAdlParseResult, AdlValue(..), ParseResult(..))
+
+adlFromYamlFile :: AdlValue a =&amp;gt; FilePath -&amp;gt; IO (Either T.Text a)
+adlFromYamlFile file = (decodeAdlParseResult from . adlFromYamlByteString) &amp;lt;$&amp;gt; (LBS.readFile file)
+  where
+    adlFromYamlByteString :: (AdlValue a) =&amp;gt; LBS.ByteString -&amp;gt; (ParseResult a)
+    adlFromYamlByteString lbs = case Y.decodeEither&amp;#39; (LBS.toStrict lbs) of
+      (Left e) -&amp;gt; ParseFailure (&amp;quot;Invalid yaml:&amp;quot; &amp;lt;&amp;gt; T.pack (Y.prettyPrintParseException e)) []
+      (Right jv) -&amp;gt; runJsonParser jsonParser [] jv
+
+    from = &amp;quot; from &amp;quot; &amp;lt;&amp;gt; T.pack file&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Hopefully this is fairly self explanatory. It:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;reads the input file contents as a bytestring&lt;/li&gt;
+&lt;li&gt;parses the yaml parser into a in-memory json value&lt;/li&gt;
+&lt;li&gt;parses the in memory json value into an adl value&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;whilst turning parse failures at either level into user friendly error messages.&lt;/p&gt;
+&lt;p&gt;With this helper function, the scaffolding for our server process is straightforward. We read an environment variable for the configuration file path, use the &lt;code&gt;adlFromYamlFile&lt;/code&gt; written previously, and launch our (dummy) server code.&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;main :: IO ()
+main = do
+  let configEnvVar = &amp;quot;CONFIG_PATH&amp;quot;
+  mEnvPath &amp;lt;- lookupEnv configEnvVar
+  case mEnvPath of
+    Nothing -&amp;gt; exitWithError (configEnvVar &amp;lt;&amp;gt; &amp;quot; not set in environment&amp;quot;)
+    (Just envPath) -&amp;gt; do
+      eConfig &amp;lt;- adlFromYamlFile envPath
+      case eConfig of
+        (Left emsg) -&amp;gt; exitWithError (T.unpack emsg)
+        (Right config) -&amp;gt; startServer config
+
+exitWithError :: String -&amp;gt; IO ()
+exitWithError emsg = do
+  hPutStrLn stderr emsg
+  exitFailure
+  
+startServer :: ServerConfig -&amp;gt; IO ()
+startServer sc = do
+  case sc_protocol sc of
+    P_http -&amp;gt; putStrLn (&amp;quot;Starting http server on port &amp;quot; ++ (show (sc_port sc)))
+    P_https{} -&amp;gt; putStrLn (&amp;quot;Starting https server on port &amp;quot; ++ (show (sc_port sc)))
+  threadDelay 1000000000&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The simplest configuration yaml specifies just the port, relying on the ADL defaults for other fields:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;port: 8080&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;An example that overrides the protocol, and hence must provide additional information:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;port: 8443
+protocol:
+  https:
+    certificate: /tmp/certificate.crt
+    certificateKey: /tmp/certificate.key&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The ADL json/yaml serialization schema is straightforward. One point of note is that ADL unions (like &lt;code&gt;Protocol&lt;/code&gt; in the example) are serialized as single element objects. See the &lt;a href=&quot;https://github.com/timbod7/adl/blob/master/docs/serialization.md&quot;&gt;serialisation documentation&lt;/a&gt; for details.&lt;/p&gt;
+&lt;p&gt;The parser provides helpful error messages. In the above example config, if you leave out the last line and fail to set the SSL key, the error is:&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;Unable to parse a value of type config.ServerConfig from demo-server-example3.yaml:
+expected field certificateKey at protocol.https&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Hopefully this post has given a simple but useful demonstration of ADL usage from haskell. It&#39;s really only a starting point - the ADL system&#39;s value increases dramatically when used to ensure consist types between systems written in multiple languages.&lt;/p&gt;
+&lt;p&gt;The complete code for this demonstration, include build and dependency configuration can be found in its &lt;a href=&quot;https://github.com/timbod7/adl-demo-hs&quot;&gt;github repo&lt;/a&gt;.&lt;/p&gt;
+      ]]></content>
+  </entry>
+</feed>

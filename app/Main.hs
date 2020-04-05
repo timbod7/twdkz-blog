@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Main where
 
@@ -10,6 +11,7 @@ import           Control.Monad
 import           Data.Aeson                 as A
 import           Data.Aeson.Lens
 import           Data.List(sortOn)
+import           Data.Time
 import           Development.Shake
 import           Development.Shake.Classes
 import           Development.Shake.Forward
@@ -68,7 +70,25 @@ data Post =
          }
     deriving (Generic, Eq, Ord, Show, FromJSON, ToJSON, Binary)
 
--- | given a list of posts this will build a table of contents
+data AtomData = AtomData
+  { atomTitle :: String
+  , atomDomain :: String
+  , atomAuthor :: String
+  , atomPosts :: [Post]
+  , atomCurrentTime :: String
+  , atomUrl :: String
+  } deriving (Generic, Eq, Ord, Show)
+
+instance ToJSON AtomData where
+  toJSON AtomData{..} = object
+    [ "title" A..= atomTitle
+    , "domain" A..= atomDomain
+    , "author" A..= atomAuthor
+    , "posts" A..= atomPosts
+    , "currentTime" A..= atomCurrentTime
+    , "url" A..= atomUrl
+    ]
+
 buildIndex :: [Post] -> Action ()
 buildIndex posts' = do
   indexT <- compileTemplate' "site/templates/index.html"
@@ -76,6 +96,26 @@ buildIndex posts' = do
       indexInfo = IndexInfo {posts = sortedPosts}
       indexHTML = T.unpack $ substitute indexT (withSiteMeta $ toJSON indexInfo)
   writeFile' (outputFolder </> "index.html") indexHTML
+
+toIsoDate :: UTCTime -> String
+toIsoDate = formatTime defaultTimeLocale (iso8601DateFormat rfc3339)
+  where
+    rfc3339 = Just "%H:%M:%SZ"
+
+buildFeed :: [Post] -> FilePath -> Action ()
+buildFeed posts toFilePath = do
+  now <- liftIO getCurrentTime
+  let atomData =
+        AtomData
+          { atomTitle = "Tim Docker"
+          , atomDomain = "https://tim.dockerz.net"
+          , atomAuthor = "Tim Docker"
+          , atomPosts = posts
+          , atomCurrentTime = toIsoDate now
+          , atomUrl = "/atom.xml"
+          }
+  atomTempl <- compileTemplate' "site/templates/atom.xml"
+  writeFile' toFilePath . T.unpack $ substitute atomTempl (toJSON atomData)
 
 -- | Find and build all posts
 buildPosts :: Action [Post]
@@ -122,6 +162,7 @@ buildRules :: Action ()
 buildRules = do
   allPosts <- buildPosts
   buildIndex allPosts
+  buildFeed allPosts (outputFolder </> "atom/all.xml")
   copyStaticFiles
 
 main :: IO ()
