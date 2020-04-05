@@ -21,7 +21,7 @@
         {{#image}}
         <img src="{{domain}}/images/{{{image}}}" alt="{{title}}">
         {{/image}}
-        {{content}}
+        {{{content}}}
       ]]></content>
   </entry>
   {{/posts}}
