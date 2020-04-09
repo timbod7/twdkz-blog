@@ -23,6 +23,7 @@ import           Slick
 import qualified Data.HashMap.Lazy as HML
 import qualified Data.Text                  as T
 import qualified Data.Map                   as M
+import qualified Data.Set                   as S
 
 ---Config-----------------------------------------------------------------------
 
@@ -92,13 +93,21 @@ instance ToJSON AtomData where
     , "url" A..= atomUrl
     ]
 
-buildIndex :: [Post] -> Action ()
-buildIndex posts' = do
+buildIndex :: FilePath -> String -> [Post] -> [String] -> Action ()
+buildIndex filePath title posts' tags = do
   indexT <- compileTemplate' "site/templates/index.html"
   let sortedPosts = reverse (sortOn date posts')
       indexInfo = IndexInfo {posts = sortedPosts}
-      indexHTML = T.unpack $ substitute indexT (withSiteMeta $ toJSON indexInfo)
-  writeFile' (outputFolder </> "index.html") indexHTML
+      jsonContext = withTitle title $ withTags tags $ withSiteMeta $ toJSON indexInfo
+      indexHTML = T.unpack $ substitute indexT jsonContext
+  writeFile' (outputFolder </> filePath) indexHTML
+  where
+    withTags :: [String] -> Value -> Value
+    withTags [] = _Object . at "tags" ?~ toJSON ([]::[T.Text])
+    withTags tags = _Object . at "tags" ?~ toJSON [tags]
+
+    withTitle :: String -> Value -> Value
+    withTitle title = _Object . at "title" ?~ toJSON title
 
 toIsoDate :: UTCTime -> String
 toIsoDate = formatTime defaultTimeLocale (iso8601DateFormat rfc3339)
@@ -164,10 +173,12 @@ copyStaticFiles = do
 buildRules :: Action ()
 buildRules = do
   allPosts <- buildPosts
-  buildIndex allPosts
-  let postsByTag = M.fromListWith (<>) (concat [[(tag,[p]) | tag <- tags p] | p <- allPosts])
+  let allTags = (S.toList . S.fromList . concat) [tags p | p <- allPosts]
+      postsByTag = M.fromListWith (<>) (concat [[(tag,[p]) | tag <- tags p] | p <- allPosts])
   for_ (M.toList postsByTag) $ \(tag,posts) -> do
+    buildIndex ("tags" </> tag <> ".html") ("Posts with tag: " <> tag) posts []
     buildFeed posts (outputFolder </> "atom" </> (tag <> ".xml"))
+  buildIndex "index.html" "All Posts" allPosts allTags
   buildFeed allPosts (outputFolder </> "atom/all.xml")
   copyStaticFiles
 
