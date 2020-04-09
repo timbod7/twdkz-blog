@@ -183,7 +183,7 @@ Hence running this:
 
 Results in this:
 
-![Example 2](2012-05-10-composable-value-editors/example2.png)
+![Example 2](/posts/2012-05-10-composable-value-editors/example2.png)
 
 The automatically generated dialog is simple, but quite functional:
 
@@ -207,7 +207,7 @@ the previous VE:
 
 Resulting in:
 
-![Example 3](2012-05-10-composable-value-editors/example3.png)
+![Example 3](/posts/2012-05-10-composable-value-editors/example3.png)
 
 Recursive types are supported, so its possible to build GTK VEs for
 expression trees, etc.

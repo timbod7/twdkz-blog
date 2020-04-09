@@ -74,22 +74,22 @@ rotate :: Number -&gt; Picture -&gt; Picture
 scale :: Number -&gt; Number -&gt; Picture -&gt; Picture</code></pre>
 <p>which let us draw much more interesting stuff. The rest of this session was spent seeing what cool stuff we could draw with these 7 functions.</p>
 <p>Nick programmed some abstract art:</p>
-<p><img src="2014-06-26-teenage-haskell/art.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/art.png" /></p>
 <p>Sam coded up a sheep:</p>
-<p><img src="2014-06-26-teenage-haskell/sheep.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/sheep.png" /></p>
 <p>That ended the session, though the boys found some unsupervised time on the computer the next day, when Nick built a castle:</p>
-<p><img src="2014-06-26-teenage-haskell/castle.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/castle.png" /></p>
 <p>and Sam did some virtual surfing:</p>
-<p><img src="2014-06-26-teenage-haskell/boards.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/boards.png" /></p>
 <h2 id="session-2-2-hours">Session 2 (2 hours):</h2>
 <p>In the second session, we started by talked about organising code for clarity and reuse.</p>
 <p>The transformation functions introduced in the previous session caused some confusion when used in combination. We talked about how each primitive worked, and how they combined - the different between rotating and then translating versus translating then rotating was investigated.</p>
 <p>The boys were keen to move on to animations. I thought we'd leave this for a few sessions, but their enthusiasm overruled. This required that we looked at how to write our own functions for the first time. (In codeworld an animation is a function from time to a picture). This is quite a big step, as we needed to get at least a basic idea of scoping also.</p>
 <p>Nevertheless we battled on, and got some movement on the screen. It was soon discovered that rotations are the most interesting transform to animate, as you don't lose you picture elements off the screen as time goes to infinity!</p>
 <p>Nick and Sam needed more assistance here, but still managed to get some ideas working. I've only got single frames of their results. Sam produced his space race:</p>
-<p><img src="2014-06-26-teenage-haskell/space-race.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/space-race.png" /></p>
 <p>and Nick made a working clock (which tells the right time if you push the run button at 12 oclock!):</p>
-<p><img src="2014-06-26-teenage-haskell/clock.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/clock.png" /></p>
 <p>In the next session we are going to have to look at numerical functions in a bit more detail in order to produce more types of animations. Time for some graph paper perhaps...</p>
 <h2 id="summary">Summary</h2>
 <p>For a beta (alpha?) piece of software, relying on some fairly advanced and new technology, Codeworld works remarkably well. And Chris has plans for it - there's a long list of proposed enhancements in the github issue tracker, and a mailing list has just been created.</p>

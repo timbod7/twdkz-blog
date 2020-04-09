@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/all.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-04-09T12:38:12Z</updated>
+  <updated>2020-04-09T13:18:07Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
@@ -142,8 +142,8 @@ make install</code></pre>
   </entry>
   <entry>
       <title>Composable Value Editors</title>
-      <link href="https://tim.dockerz.net/posts/2012-05-10-composable-value-editors.html"/>
-      <id>https://tim.dockerz.net/posts/2012-05-10-composable-value-editors.html</id>
+      <link href="https://tim.dockerz.net//posts/2012-05-10-composable-value-editors.html"/>
+      <id>https://tim.dockerz.net//posts/2012-05-10-composable-value-editors.html</id>
       <updated>2012-05-10T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>Graphical User Interfaces (GUIs) in haskell are frustrating. It's not yet clear what is the cleanest model for fitting GUIs into functional programming. Currently there are two main approaches:</p>
@@ -266,7 +266,7 @@ modalDialogNew :: String -&gt; VE a -&gt; IO (ModalDialog a)</code></pre>
 <pre><code>dialog &lt;- modalDialogNew &quot;Example 2&quot; (mkVE :: Person)
 ma &lt;- md_run dialog</code></pre>
 <p>Results in this:</p>
-<p><img src="2012-05-10-composable-value-editors/example2.png" alt="Example 2" /></p>
+<p><img src="/posts/2012-05-10-composable-value-editors/example2.png" alt="Example 2" /></p>
 <p>The automatically generated dialog is simple, but quite functional:</p>
 <ul>
 <li>invalid fields have a red background, dynamically updated with each keystroke</li>
@@ -280,7 +280,7 @@ ma &lt;- md_run dialog</code></pre>
 
 instance HasVE Team ...</code></pre>
 <p>Resulting in:</p>
-<p><img src="2012-05-10-composable-value-editors/example3.png" alt="Example 3" /></p>
+<p><img src="/posts/2012-05-10-composable-value-editors/example3.png" alt="Example 3" /></p>
 <p>Recursive types are supported, so its possible to build GTK VEs for expression trees, etc.</p>
 <h1 id="json-serialisation">JSON Serialisation</h1>
 <p>As I alluded to previously, given VE a, we can automatically generate a JSON generator and parser for values of type a:</p>
@@ -740,8 +740,8 @@ main = getArgs &gt;&gt;= scanPackages      </code></pre>
   </entry>
   <entry>
       <title>Teenage haskell</title>
-      <link href="https://tim.dockerz.net/posts/2014-06-26-teenage-haskell.html"/>
-      <id>https://tim.dockerz.net/posts/2014-06-26-teenage-haskell.html</id>
+      <link href="https://tim.dockerz.net//posts/2014-06-26-teenage-haskell.html"/>
+      <id>https://tim.dockerz.net//posts/2014-06-26-teenage-haskell.html</id>
       <updated>2014-06-26T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>I've been inspired by the efforts of others (<a href="http://cdsmith.wordpress.com/2011/08/16/haskell-for-kids-week-1/">Chris Smith</a>, <a href="http://justtesting.org/post/70871612766/lets-program">Manuel Chakravarty</a>) to try teaching children haskell as a first experience of programming. Haskell has a reputation of being a "hard" language, but I suspect this stems from the challenges faced by software developers transitioning from an imperative programming paradigm to a functional one. There's anecdotal evidence that, for first steps into programming, a functional programming language may be easier for many students, and allow a class to focus more quickly on interesting aspects of programming.</p>
@@ -776,22 +776,22 @@ rotate :: Number -&gt; Picture -&gt; Picture
 scale :: Number -&gt; Number -&gt; Picture -&gt; Picture</code></pre>
 <p>which let us draw much more interesting stuff. The rest of this session was spent seeing what cool stuff we could draw with these 7 functions.</p>
 <p>Nick programmed some abstract art:</p>
-<p><img src="2014-06-26-teenage-haskell/art.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/art.png" /></p>
 <p>Sam coded up a sheep:</p>
-<p><img src="2014-06-26-teenage-haskell/sheep.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/sheep.png" /></p>
 <p>That ended the session, though the boys found some unsupervised time on the computer the next day, when Nick built a castle:</p>
-<p><img src="2014-06-26-teenage-haskell/castle.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/castle.png" /></p>
 <p>and Sam did some virtual surfing:</p>
-<p><img src="2014-06-26-teenage-haskell/boards.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/boards.png" /></p>
 <h2 id="session-2-2-hours">Session 2 (2 hours):</h2>
 <p>In the second session, we started by talked about organising code for clarity and reuse.</p>
 <p>The transformation functions introduced in the previous session caused some confusion when used in combination. We talked about how each primitive worked, and how they combined - the different between rotating and then translating versus translating then rotating was investigated.</p>
 <p>The boys were keen to move on to animations. I thought we'd leave this for a few sessions, but their enthusiasm overruled. This required that we looked at how to write our own functions for the first time. (In codeworld an animation is a function from time to a picture). This is quite a big step, as we needed to get at least a basic idea of scoping also.</p>
 <p>Nevertheless we battled on, and got some movement on the screen. It was soon discovered that rotations are the most interesting transform to animate, as you don't lose you picture elements off the screen as time goes to infinity!</p>
 <p>Nick and Sam needed more assistance here, but still managed to get some ideas working. I've only got single frames of their results. Sam produced his space race:</p>
-<p><img src="2014-06-26-teenage-haskell/space-race.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/space-race.png" /></p>
 <p>and Nick made a working clock (which tells the right time if you push the run button at 12 oclock!):</p>
-<p><img src="2014-06-26-teenage-haskell/clock.png" /></p>
+<p><img src="/posts/2014-06-26-teenage-haskell/clock.png" /></p>
 <p>In the next session we are going to have to look at numerical functions in a bit more detail in order to produce more types of animations. Time for some graph paper perhaps...</p>
 <h2 id="summary">Summary</h2>
 <p>For a beta (alpha?) piece of software, relying on some fairly advanced and new technology, Codeworld works remarkably well. And Chris has plans for it - there's a long list of proposed enhancements in the github issue tracker, and a mailing list has just been created.</p>
@@ -837,8 +837,8 @@ main = toFile def &quot;test.png&quot; $ plot $ points &quot;lines&quot; mydata<
   </entry>
   <entry>
       <title>Haskell on Yosemite (OSX 10.10)</title>
-      <link href="https://tim.dockerz.net/posts/2015-02-25-ghc-yosemite.html"/>
-      <id>https://tim.dockerz.net/posts/2015-02-25-ghc-yosemite.html</id>
+      <link href="https://tim.dockerz.net//posts/2015-02-25-ghc-yosemite.html"/>
+      <id>https://tim.dockerz.net//posts/2015-02-25-ghc-yosemite.html</id>
       <updated>2015-02-25T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <h1 id="update-2016-05-16">Update (2016-05-16)</h1>
@@ -868,7 +868,7 @@ main = toFile def &quot;test.png&quot; $ plot $ points &quot;lines&quot; mydata<
 <p>This is quick and easy, following the instructions on the <a href="http://brew.sh">brew homepage</a>.</p>
 <h1 id="3-install-ghcformacosx">3. Install ghcformacosx</h1>
 <p><a href="https://ghcformacosx.github.io">"ghcformacosx"</a> is a "drag and drop" installation of ghc 7.8.4 and cabal 1.22.0.0. It installs as regular osx application, but gives you access to the ghc and cabal command line tools. A nice feature is that if you run the application, it tells you what you need to do to set your environment up correctly, and shows a dashboard indicating whether you have done so:</p>
-<p><img src="2015-02-25-ghc-yosemite/ghcformacosx.png" /></p>
+<p><img src="/posts/2015-02-25-ghc-yosemite/ghcformacosx.png" /></p>
 <p>Once this is done you need to bring the local package database up to date:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1"></a><span class="ex">cabal</span> update</span></code></pre></div>
 <h1 id="4-use-brew-to-install-some-key-tools-and-libraries">4. Use brew to install some key tools and libraries</h1>

@@ -182,7 +182,7 @@ ln -s hackage/.cabal-sandbox/bin/cabal
 [1]: https://ghcformacosx.github.io
 [2]: http://brew.sh
 [3]: https://ghc.haskell.org/trac/ghc/ticket/8197
-[4]: 2015-02-25-ghc-yosemite/ghcformacosx.png
+[4]: /posts/2015-02-25-ghc-yosemite/ghcformacosx.png
 [5]: http://johnmacfarlane.net/pandoc/
 [6]: https://hackage.haskell.org/package/ghc-mod
 [7]: http://darcs.net

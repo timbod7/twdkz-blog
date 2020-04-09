@@ -163,9 +163,9 @@ If you are a haskell enthusiast, Give it a try!
 [2]: http://justtesting.org/post/70871612766/lets-program
 [3]: http://cdsmith.wordpress.com/2014/06/03/codeworld-rises-again/
 [4]: http://codeworld.info/doc/Prelude.html
-[5]: 2014-06-26-teenage-haskell/art.png
-[6]: 2014-06-26-teenage-haskell/sheep.png
-[7]: 2014-06-26-teenage-haskell/castle.png
-[8]: 2014-06-26-teenage-haskell/boards.png
-[9]: 2014-06-26-teenage-haskell/space-race.png
-[10]: 2014-06-26-teenage-haskell/clock.png
+[5]: /posts/2014-06-26-teenage-haskell/art.png
+[6]: /posts/2014-06-26-teenage-haskell/sheep.png
+[7]: /posts/2014-06-26-teenage-haskell/castle.png
+[8]: /posts/2014-06-26-teenage-haskell/boards.png
+[9]: /posts/2014-06-26-teenage-haskell/space-race.png
+[10]: /posts/2014-06-26-teenage-haskell/clock.png

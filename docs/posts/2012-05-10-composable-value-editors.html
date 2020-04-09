@@ -162,7 +162,7 @@ modalDialogNew :: String -&gt; VE a -&gt; IO (ModalDialog a)</code></pre>
 <pre><code>dialog &lt;- modalDialogNew &quot;Example 2&quot; (mkVE :: Person)
 ma &lt;- md_run dialog</code></pre>
 <p>Results in this:</p>
-<p><img src="2012-05-10-composable-value-editors/example2.png" alt="Example 2" /></p>
+<p><img src="/posts/2012-05-10-composable-value-editors/example2.png" alt="Example 2" /></p>
 <p>The automatically generated dialog is simple, but quite functional:</p>
 <ul>
 <li>invalid fields have a red background, dynamically updated with each keystroke</li>
@@ -176,7 +176,7 @@ ma &lt;- md_run dialog</code></pre>
 
 instance HasVE Team ...</code></pre>
 <p>Resulting in:</p>
-<p><img src="2012-05-10-composable-value-editors/example3.png" alt="Example 3" /></p>
+<p><img src="/posts/2012-05-10-composable-value-editors/example3.png" alt="Example 3" /></p>
 <p>Recursive types are supported, so its possible to build GTK VEs for expression trees, etc.</p>
 <h1 id="json-serialisation">JSON Serialisation</h1>
 <p>As I alluded to previously, given VE a, we can automatically generate a JSON generator and parser for values of type a:</p>
