@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/all.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-04-09T13:18:07Z</updated>
+  <updated>2020-04-09T13:48:21Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
@@ -1112,6 +1112,23 @@ protocol:
 expected field certificateKey at protocol.https</code></pre>
 <p>Hopefully this post has given a simple but useful demonstration of ADL usage from haskell. It's really only a starting point - the ADL system's value increases dramatically when used to ensure consist types between systems written in multiple languages.</p>
 <p>The complete code for this demonstration, include build and dependency configuration can be found in its <a href="https://github.com/timbod7/adl-demo-hs">github repo</a>.</p>
+      ]]></content>
+  </entry>
+  <entry>
+      <title>A new home for my content</title>
+      <link href="https://tim.dockerz.net//posts/2020-04-09-new-blog.html"/>
+      <id>https://tim.dockerz.net//posts/2020-04-09-new-blog.html</id>
+      <updated>2020-04-09T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        <p>I'm planning to write more over the next few months, and want to move away from the wordpress free tier that has hosted this blog until now. So, I've migrated all existing content from</p>
+<p><a href="https://twdkz.wordpress.com/">https://twdkz.wordpress.com/</a></p>
+<p>to my new site at</p>
+<p><a href="https://tim.dockerz.net/">https://tim.dockerz.net/</a></p>
+<p>This is now hosted at github pages, and uses Chris Penner's <a href="https://github.com/ChrisPenner/slick">slick website generator</a>. slick is a</p>
+<blockquote>
+<p>a static site generator written and configured using Haskell... (it) provides a small set of tools and combinators for building static websites on top of the Shake build system</p>
+</blockquote>
+<p>It's worked out well for me so far.</p>
       ]]></content>
   </entry>
 </feed>
