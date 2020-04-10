@@ -71,15 +71,15 @@ li>ul,li>ol{
 h1,h2,h3,h4,h5,h6{
     line-height:inherit;
     margin:1.5em 0 .75em;
-    font-weight:600
+    font-weight:bold
 }
-h2{
+h1{
     font-size:150%
 }
-h3{
+h2{
     font-size:120%
 }
-h4,h5,h6{
+h3,h4,h5,h6{
     font-size:95%;
     text-transform:uppercase
 }
@@ -176,11 +176,19 @@ body {
   align-items: center;
 }
 
+.header-left a {
+  margin-right: 10px;
+}
+
+.header-right a {
+  margin-left: 10px;
+}
+
 .github-link {
 }
 
 .github-link img {
-  margin: 3px;
+  margin: 4px;
 }
 
 

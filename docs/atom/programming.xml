@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/programming.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-04-09T13:48:21Z</updated>
+  <updated>2020-04-10T01:50:30Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
@@ -27,8 +27,8 @@
   </entry>
   <entry>
       <title>Using ADL from haskell</title>
-      <link href="https://tim.dockerz.net/posts/2019-09-17-hadl-haskell.html"/>
-      <id>https://tim.dockerz.net/posts/2019-09-17-hadl-haskell.html</id>
+      <link href="https://tim.dockerz.net//posts/2019-09-17-hadl-haskell.html"/>
+      <id>https://tim.dockerz.net//posts/2019-09-17-hadl-haskell.html</id>
       <updated>2019-09-17T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>The <a href="https://github.com/timbod7/adl">ADL</a> system has proven valuable at <a href="https://www.helixta.com.au/">Helix</a>. We use it in most of our projects, as a strongly typed schema language for specifying:</p>
@@ -180,8 +180,8 @@ expected field certificateKey at protocol.https</code></pre>
   </entry>
   <entry>
       <title>Algebraic Data Types in Java</title>
-      <link href="https://tim.dockerz.net/posts/2017-11-14-adl-java.html"/>
-      <id>https://tim.dockerz.net/posts/2017-11-14-adl-java.html</id>
+      <link href="https://tim.dockerz.net//posts/2017-11-14-adl-java.html"/>
+      <id>https://tim.dockerz.net//posts/2017-11-14-adl-java.html</id>
       <updated>2017-11-14T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>At <a href="http://www.helixta.com.au/">Helix</a> we often code backend services in java. I find modern java <em>acceptable</em> as a language for getting things done. As a long time haskell developer, however, I find java's facilities for data types frustrating indeed. These frustrations are twofold. Java lacks support for algebraic data types (<a href="https://en.wikipedia.org/wiki/Algebraic_data_type">ADTs</a>), and requires large amounts of boilerplate to define even simple types.</p>
@@ -207,8 +207,8 @@ expected field certificateKey at protocol.https</code></pre>
   </entry>
   <entry>
       <title>An executable specification for voteflux</title>
-      <link href="https://tim.dockerz.net/posts/2016-05-16-voteflux-spec.html"/>
-      <id>https://tim.dockerz.net/posts/2016-05-16-voteflux-spec.html</id>
+      <link href="https://tim.dockerz.net//posts/2016-05-16-voteflux-spec.html"/>
+      <id>https://tim.dockerz.net//posts/2016-05-16-voteflux-spec.html</id>
       <updated>2016-05-16T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p><a href="https://voteflux.org/">voteflux</a> is an interesting new political party, that will field senate candidates at the Australian federal election in July. It's sole policy is to implement <a href="https://en.wikipedia.org/wiki/Delegative_democracy">delegative democracy</a>, and to do this within the existing Australian political system. It intends to use blockchain technology to provide cryptographic guarantees to the voting process.</p>
@@ -306,8 +306,8 @@ expected field certificateKey at protocol.https</code></pre>
   </entry>
   <entry>
       <title>A new charting API</title>
-      <link href="https://tim.dockerz.net/posts/2014-09-06-chart-api.html"/>
-      <id>https://tim.dockerz.net/posts/2014-09-06-chart-api.html</id>
+      <link href="https://tim.dockerz.net//posts/2014-09-06-chart-api.html"/>
+      <id>https://tim.dockerz.net//posts/2014-09-06-chart-api.html</id>
       <updated>2014-09-06T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>One of the challenges with building a library like <a href="https://github.com/timbod7/haskell-chart">Chart</a> is the tension between ease of use and flexibility. Users want to produce charts with a minimum of code up front, but later want to refine the details. The chart library addresses this through the use of "defaulted records" using <a href="https://hackage.haskell.org/package/data-default-class-0.0.1/docs/Data-Default-Class.html">Data.Default.Class</a>. Because such records are often nested, we rely on the somewhat intimidating <a href="https://hackage.haskell.org/package/lens-1.2">lens</a> library to modify the default values. We end up with code to create chart elements like this:</p>
@@ -403,8 +403,8 @@ scale :: Number -&gt; Number -&gt; Picture -&gt; Picture</code></pre>
   </entry>
   <entry>
       <title>Cabal version consistency</title>
-      <link href="https://tim.dockerz.net/posts/2013-11-04-cabal-version-consistency.html"/>
-      <id>https://tim.dockerz.net/posts/2013-11-04-cabal-version-consistency.html</id>
+      <link href="https://tim.dockerz.net//posts/2013-11-04-cabal-version-consistency.html"/>
+      <id>https://tim.dockerz.net//posts/2013-11-04-cabal-version-consistency.html</id>
       <updated>2013-11-04T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>Thanks to some great work done over the google summer of code, the <a href="https://github.com/timbod7/haskell-chart/wiki">chart library</a> has gained much new functionality over the last 6 months. A consequence of this is that it has gained plenty of dependencies on other software. Furthermore, where the library previously had 2 cabal files to build the system, it now has 4. It's important the the versioning of dependencies is consistent across these cabal files, but manually checking is tedious. As best I could tell there is not yet a tool to facilitate this.</p>
@@ -509,8 +509,8 @@ main = getArgs &gt;&gt;= scanPackages      </code></pre>
   </entry>
   <entry>
       <title>Data analysis with Monoids</title>
-      <link href="https://tim.dockerz.net/posts/2013-05-31-data-analysis-with-monoids.html"/>
-      <id>https://tim.dockerz.net/posts/2013-05-31-data-analysis-with-monoids.html</id>
+      <link href="https://tim.dockerz.net//posts/2013-05-31-data-analysis-with-monoids.html"/>
+      <id>https://tim.dockerz.net//posts/2013-05-31-data-analysis-with-monoids.html</id>
       <updated>2013-05-31T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>This post expresses the key ideas of a talk I gave at FP-SYD this week.</p>
@@ -826,8 +826,8 @@ stats
   </entry>
   <entry>
       <title>Composable Value Editor code</title>
-      <link href="https://tim.dockerz.net/posts/2012-09-16-composable-value-editor-code.html"/>
-      <id>https://tim.dockerz.net/posts/2012-09-16-composable-value-editor-code.html</id>
+      <link href="https://tim.dockerz.net//posts/2012-09-16-composable-value-editor-code.html"/>
+      <id>https://tim.dockerz.net//posts/2012-09-16-composable-value-editor-code.html</id>
       <updated>2012-09-16T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>I've made the code for this library (previously <a href="2012-05-10-composable-value-editors.html">described here</a>) available via a repository on github: <a href="https://github.com/timbod7/veditor" class="uri">https://github.com/timbod7/veditor</a> It's still experimental, so I don't intend to put it on hackage until I have (or someone else has) a dependency on it. The actual VE GADT in the source has an extra type parameter intended to let the generated UIs depend on context. Where this is not necessary, the ConstE type may be supplied. Hence, in the actual code the type <code>VE ConstE a</code> corresponds to <code>VE a</code> in the previous blog post.</p>
@@ -1001,8 +1001,8 @@ uiJSON :: VE ConstE a -&gt; VEJSON a</code></pre>
   </entry>
   <entry>
       <title>Installing ghc 7.03 and the haskell platform on RHEL 5.6</title>
-      <link href="https://tim.dockerz.net/posts/2011-12-21-ghc-on-rhel65.html"/>
-      <id>https://tim.dockerz.net/posts/2011-12-21-ghc-on-rhel65.html</id>
+      <link href="https://tim.dockerz.net//posts/2011-12-21-ghc-on-rhel65.html"/>
+      <id>https://tim.dockerz.net//posts/2011-12-21-ghc-on-rhel65.html</id>
       <updated>2011-12-21T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>The current haskell platform requires ghc 7.0.3. I need this to run on some RHEL 5.6 machines. Whilst this OS update was released in Jan 2011, it's based on old software. In particular, it's built with libc 2.5, which was released back in 2006. It's not able to use the prebuilt generic binary release from the <a href="http://haskell.org/ghc/download_ghc_7_0_3" title="ghc downloads page">ghc downloads page</a>. It says:</p>
@@ -1082,8 +1082,8 @@ make install</code></pre>
   </entry>
   <entry>
       <title>HBeat Lives</title>
-      <link href="https://tim.dockerz.net/posts/2011-11-29-hbeat-lives.html"/>
-      <id>https://tim.dockerz.net/posts/2011-11-29-hbeat-lives.html</id>
+      <link href="https://tim.dockerz.net//posts/2011-11-29-hbeat-lives.html"/>
+      <id>https://tim.dockerz.net//posts/2011-11-29-hbeat-lives.html</id>
       <updated>2011-11-29T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>Reorganising my projects home, I copied in the old documentation for my <a href="http://dockerz.net/twd/hBeat">hbeat</a> program. The docs needed some updating, so I decided to check it all still works ok. Fearing bitrot, I was pleased and a little suprised to see that on my recently rebuilt ubuntu machine, all I needed was</p>
@@ -1095,8 +1095,8 @@ cabal-dev install hbeat</code></pre>
   </entry>
   <entry>
       <title>Accessing the cabal version from an application</title>
-      <link href="https://tim.dockerz.net/posts/2011-11-21-cabal-version-access.html"/>
-      <id>https://tim.dockerz.net/posts/2011-11-21-cabal-version-access.html</id>
+      <link href="https://tim.dockerz.net//posts/2011-11-21-cabal-version-access.html"/>
+      <id>https://tim.dockerz.net//posts/2011-11-21-cabal-version-access.html</id>
       <updated>2011-11-21T00:00:00Z</updated>
       <content type="html"><![CDATA[
         <p>I wanted the --version flag in an application to return the version from the cabal file. Unable to find solution for this on the net, I ventured into the darcs source code to for a solution. It's actually pretty easy:</p>

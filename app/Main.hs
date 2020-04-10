@@ -1,14 +1,16 @@
-{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
 import           Control.Lens
 import           Control.Monad
 import           Data.Aeson                 as A
+import           Data.Aeson.TH
 import           Data.Aeson.Lens
 import           Data.Foldable(for_)
 import           Data.List(sortOn)
@@ -60,43 +62,43 @@ data SiteMeta =
 data IndexInfo =
   IndexInfo
     { posts :: [Post]
-    } deriving (Generic, Show, FromJSON, ToJSON)
+    } deriving (Generic, Show)
+
+-- | Data for a page
+data Page =
+    Page { page_title   :: String
+         , page_author  :: String
+         , page_content :: String
+         , page_url     :: String
+         }
+    deriving (Generic, Eq, Ord, Show, Binary)
 
 -- | Data for a blog post
 data Post =
-    Post { title   :: String
-         , author  :: String
-         , content :: String
-         , url     :: String
-         , date    :: String
-         , image   :: Maybe String
-         , tags    :: [String]
+    Post { post_title   :: String
+         , post_author  :: String
+         , post_content :: String
+         , post_url     :: String
+         , post_date    :: Maybe String
+         , post_image   :: Maybe String
+         , post_tags    :: [String]
          }
-    deriving (Generic, Eq, Ord, Show, FromJSON, ToJSON, Binary)
+    deriving (Generic, Eq, Ord, Show, Binary)
 
 data AtomData = AtomData
-  { atomTitle :: String
-  , atomDomain :: String
-  , atomAuthor :: String
-  , atomPosts :: [Post]
-  , atomCurrentTime :: String
-  , atomUrl :: String
+  { atom_title :: String
+  , atom_domain :: String
+  , atom_author :: String
+  , atom_posts :: [Post]
+  , atom_currentTime :: String
+  , atom_url :: String
   } deriving (Generic, Eq, Ord, Show)
 
-instance ToJSON AtomData where
-  toJSON AtomData{..} = object
-    [ "title" A..= atomTitle
-    , "domain" A..= atomDomain
-    , "author" A..= atomAuthor
-    , "posts" A..= atomPosts
-    , "currentTime" A..= atomCurrentTime
-    , "url" A..= atomUrl
-    ]
 
 buildIndex :: FilePath -> String -> [Post] -> [String] -> Action ()
 buildIndex filePath title posts' tags = do
   indexT <- compileTemplate' "site/templates/index.html"
-  let sortedPosts = reverse (sortOn date posts')
+  let sortedPosts = reverse (sortOn post_date posts')
       indexInfo = IndexInfo {posts = sortedPosts}
       jsonContext = withTitle title $ withTags tags $ withSiteMeta $ toJSON indexInfo
       indexHTML = T.unpack $ substitute indexT jsonContext
@@ -119,47 +121,41 @@ buildFeed posts toFilePath = do
   now <- liftIO getCurrentTime
   let atomData =
         AtomData
-          { atomTitle = "Tim Docker"
-          , atomDomain = "https://tim.dockerz.net"
-          , atomAuthor = "Tim Docker"
-          , atomPosts = posts
-          , atomCurrentTime = toIsoDate now
-          , atomUrl = "/atom/" <> takeFileName toFilePath
+          { atom_title = "Tim Docker"
+          , atom_domain = "https://tim.dockerz.net"
+          , atom_author = "Tim Docker"
+          , atom_posts = posts
+          , atom_currentTime = toIsoDate now
+          , atom_url = "/atom/" <> takeFileName toFilePath
           }
   atomTempl <- compileTemplate' "site/templates/atom.xml"
   writeFile' toFilePath . T.unpack $ substitute atomTempl (toJSON atomData)
 
--- | Find and build all posts
-buildPosts :: Action [Post]
-buildPosts = do
-  pPaths <- getDirectoryFiles "." ["site/posts/*.md"]
-  forP pPaths buildPost
-
--- | Load a post, process metadata, write it to output, then return the post object
--- Detects changes to either post content or template
-buildPost :: FilePath -> Action Post
-buildPost srcPath = cacheAction ("build" :: T.Text, srcPath) $ do
-  liftIO . putStrLn $ "Rebuilding post: " <> srcPath
-  postContent <- readFile' srcPath
-  -- load post content and metadata as JSON blob
-  postData <- markdownToHTML . T.pack $ postContent
-  let postUrl = T.pack . dropDirectory1 $ srcPath -<.> "html"
-      withPostUrl = _Object . at "url" ?~ String ("/" <> postUrl)
+-- | Load a page, process metadata, write it to output, then return the page object
+-- Detects changes to either page content or template
+buildPage :: (Typeable a, FromJSON a, Binary a, Show a) => FilePath -> FilePath -> Action a
+buildPage templatePath srcPath = cacheAction ("build" :: T.Text, srcPath) $ do
+  liftIO . putStrLn $ "Rebuilding page: " <> srcPath
+  pageContent <- readFile' srcPath
+  -- load page content and metadata as JSON blob
+  pageData <- markdownToHTML . T.pack $ pageContent
+  let pageUrl = T.pack . dropDirectory1 $ srcPath -<.> "html"
+      withPageUrl = _Object . at "url" ?~ String ("/" <> pageUrl)
   -- Add additional metadata we've been able to compute
-  let fullPostData = withSiteMeta . withPostUrl $ postData
-  template <- compileTemplate' "site/templates/post.html"
-  writeFile' (outputFolder </> T.unpack postUrl) . T.unpack $ substitute template fullPostData
-  post <- convert fullPostData
+  let fullPageData = withSiteMeta . withPageUrl $ pageData
+  template <- compileTemplate' templatePath
+  writeFile' (outputFolder </> T.unpack pageUrl) . T.unpack $ substitute template fullPageData
+  page <- convert fullPageData
   let datadir = dropExtensions srcPath
-      postdir = dropDirectory1 datadir
-  -- Copy static files from the per-post direcory
+      pagedir = dropDirectory1 datadir
+  -- Copy static files from the per-page direcory
   -- (Same name as the most, without the .md ext)
   hasStatic <- doesDirectoryExist datadir
   when hasStatic $ do
     staticpaths <- getDirectoryFiles datadir ["*"]
     void $ forP staticpaths $ \filepath ->
-       copyFileChanged (datadir </> filepath) (outputFolder </> postdir </> filepath)
-  return post
+       copyFileChanged (datadir </> filepath) (outputFolder </> pagedir </> filepath)
+  return page
 
 -- | Copy all static files from the listed folders to their destination
 copyStaticFiles :: Action ()
@@ -172,17 +168,34 @@ copyStaticFiles = do
 --   defines workflow to build the website
 buildRules :: Action ()
 buildRules = do
-  allPosts <- buildPosts
-  let allTags = (S.toList . S.fromList . concat) [tags p | p <- allPosts]
-      postsByTag = M.fromListWith (<>) (concat [[(tag,[p]) | tag <- tags p] | p <- allPosts])
+  -- Pages
+  do
+    paths <- getDirectoryFiles "." ["site/pages/*.md"]
+    forP paths (buildPage "site/templates/page.html") :: Action [Page]
+
+  -- Posts
+  allPosts <- do
+    paths <- getDirectoryFiles "." ["site/posts/*.md"]
+    forP paths (buildPage "site/templates/post.html" )
+
+  -- Post indexes and feeds
+  let allTags = (S.toList . S.fromList . concat) [post_tags p | p <- allPosts]
+      postsByTag = M.fromListWith (<>) (concat [[(tag,[p]) | tag <- post_tags p] | p <- allPosts])
   for_ (M.toList postsByTag) $ \(tag,posts) -> do
     buildIndex ("tags" </> tag <> ".html") ("Posts with tag: " <> tag) posts []
     buildFeed posts (outputFolder </> "atom" </> (tag <> ".xml"))
   buildIndex "index.html" "All Posts" allPosts allTags
   buildFeed allPosts (outputFolder </> "atom/all.xml")
+
   copyStaticFiles
 
 main :: IO ()
 main = do
   let shOpts = shakeOptions { shakeVerbosity = Chatty, shakeLintInside = ["\\"]}
   shakeArgsForward shOpts buildRules
+
+$(deriveJSON defaultOptions{fieldLabelModifier=drop 5} ''Page)
+$(deriveJSON defaultOptions{fieldLabelModifier=drop 5} ''Post)
+$(deriveJSON defaultOptions{fieldLabelModifier=drop 5} ''AtomData)
+$(deriveJSON defaultOptions ''IndexInfo)
+
