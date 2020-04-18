@@ -2,12 +2,77 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/programming.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-04-10T01:50:30Z</updated>
+  <updated>2020-04-18T02:58:34Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
   <id>https://tim.dockerz.net/</id>
 
+  <entry>
+      <title>Optionality and defaulting in ADL</title>
+      <link href="https://tim.dockerz.net//posts/2020-04-17-optionality-in-adl.html"/>
+      <id>https://tim.dockerz.net//posts/2020-04-17-optionality-in-adl.html</id>
+      <updated>2020-04-17T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        <p><a href="https://github.com/timbod7/adl">ADL</a> is a data modeling language, which also specifies a <a href="https://github.com/timbod7/adl/blob/master/docs/serialization.md">serialization schema</a>. Values can be be optional in the data model, and independently defaulted in deserialization and value construction.</p>
+<p>In ADL, optionality in the data model is part of a value's type. One uses either the <code>Nullable&lt;T&gt;</code> <a href="https://github.com/timbod7/adl/blob/master/docs/language.md#primitive-types">primitive</a> or the <code>Maybe&lt;T&gt;</code> type from the <a href="https://github.com/timbod7/adl/blob/master/adl/stdlib/sys/types.adl">adl standard library</a>. For example:</p>
+<pre><code>struct Person {
+  String name;
+  Nullable&lt;String&gt; phoneNumber;
+};</code></pre>
+<p>In our model, every person has a name, but a having phone number is optional. But according to the ADL serialization <a href="https://github.com/timbod7/adl/blob/master/docs/serialization.md">specification</a>, both fields must still be present in the serialized value. Hence <code>{"name":"Tim"}</code> is invalid. If Tim doesn't have a phone, you'd need to serialize as <code>{"name":"Tim": "phoneNumber": null}</code>.</p>
+<p>If you want a field to be defaulted in the serialized form, you must provide a default value in the ADL type, ie:</p>
+<pre><code>struct Person {
+  String name;
+  Nullable&lt;String&gt; phoneNumber = null;
+};</code></pre>
+<p>With this type, <code>{"name":"Tim"}</code> would be a valid value. (Note that defaults can be fully structured values, not just primitives)</p>
+<p>This distinction is important, as it's often useful to have default values that are not optional. Consider when we need to extend Person with gender information. If we do it in this way:</p>
+<pre><code>struct Person {
+  String name;
+  Nullable&lt;String&gt; phoneNumber = null;
+  Gender gender = &quot;unspecified&quot;;
+};
+
+union Gender {
+  Void female;
+  Void male;
+  Void unspecified;
+};</code></pre>
+<p>then every pre-existing serialized Person value will still be valid, and will assume a gender value of unspecified.</p>
+<p>Another use for defaults without optionality is where we have large data types with many fields values, most of which are defaulted. As a concrete example, consider a configuration for an application web server:</p>
+<pre><code>struct MyAppServerConfig {
+  DbConnectionConfig dbConnection;
+  
+  Word16 httpPort = 8080;
+  LogLevel logLevel = &quot;error&quot;;
+};
+
+struct DbConnectionConfig {
+  String host;
+  Word16 port = 5432;
+  String dbName = &quot;myapp&quot;;
+  String username;
+  String password;
+  Word16 connectionPoolMinSize = 4;
+  Word16 connectionPoolMaxSize = 16;
+};</code></pre>
+<p>In this case one only needs to provide values for the db host, username and password and can rely on the defaults for the other fields:</p>
+<pre><code>{
+  &quot;dbConnection&quot; : {
+    &quot;host&quot;: &quot;localhost&quot;,
+    &quot;username&quot;: &quot;test&quot;,
+    &quot;password&quot;: &quot;test&quot;
+  }
+}</code></pre>
+<p>Note that defaults are not only used in deserialization. In the ADL language backends only the non defaulted fields need to be specified when constructing an in memory ADL value.</p>
+<h2 id="on-maybet-vs-nullablet">on Maybe&lt;T&gt; vs Nullable&lt;T&gt;</h2>
+<p>As mentioned above, ADL has two parameterized types representing optionality: the <code>Nullable&lt;T&gt;</code> <a href="https://github.com/timbod7/adl/blob/master/docs/language.md#primitive-types">primitive</a> or the <code>Maybe&lt;T&gt;</code> type from the <a href="https://github.com/timbod7/adl/blob/master/adl/stdlib/sys/types.adl">adl standard library</a>.</p>
+<p>Originally ADL didn't have the Nullable primitive, relying on <code>Maybe&lt;T&gt;</code> from the ADL standard library, with the expect definition as a and ADL union (ie sum type). A consequence with <code>Maybe&lt;T&gt;</code> defined in ADL that way is that the serialised Json is as it would be for any other union: <code>"nothing"</code> or <code>{"just": t}</code>. I was fine with this, but some users strongly prefer to see <code>null</code> or <code>t</code> in the json. So the <code>Nullable&lt;T&gt;</code> primitive was added, that serializes in the way that people expect.</p>
+<p>Note that <code>Nullable&lt;T&gt;</code> is less expressive than <code>Maybe&lt;T&gt;</code> in that you can't usefully nest it. <code>Maybe&lt;Maybe&lt;T&gt;&gt;</code> is semantically useful, where as <code>Nullable&lt;Nullable&lt;T&gt;&gt;</code> is not, as the serialized representation can't represent all of the types values.</p>
+<p>Hence <code>Nullable&lt;T&gt;</code> should only be used when <code>T</code> does not permit a serialized <code>null</code>. (TODO: make this a type check in the ADL compiler).</p>
+      ]]></content>
+  </entry>
   <entry>
       <title>A new home for my content</title>
       <link href="https://tim.dockerz.net//posts/2020-04-09-new-blog.html"/>
