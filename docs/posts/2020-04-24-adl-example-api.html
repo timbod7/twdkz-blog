@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="API specifications in ADL">
+    <meta name="twitter:description" content="">
+        <title>API specifications in ADL</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header id="header">
+      <div class="header-content">
+        <nav class="header-left">
+            <a href="/">Home</a>
+        </nav>
+    
+        <div class="header-right">
+            <a href="/pages/about.html">About</a>
+        <a class="github-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
+        </a>
+    </div>
+      </div>
+    </header>
+
+<div id="page">
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              API specifications in ADL
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2020-04-24</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <h1 id="introduction">Introduction</h1>
+<p>This post is the first of a series where I will demonstrate using the <a href="https://github.com/timbod7/adl">ADL</a> system to specify an HTTP based API, and implement conforming servers and clients in different programming languages.</p>
+<p>In this post, I will explore how ADL can be used to specify APIs, and do this for a simple application. The API will be small enough for demonstration purposes, but will include login, authorization, and basic application functions.</p>
+<p>Future posts will implement servers for this API in haskell and rust, and an API client in typescript (for use in the browser). The ADL type definitions will "glue" the multi-language system together, ensuring consistent static types between languages. Hence ADL's mantra:</p>
+<blockquote>
+<p>Consistent types everywhere!</p>
+</blockquote>
+<h1 id="why-not-use-">Why not use ...?</h1>
+<p>In this post we are using ADL to define a API as one would with other API definition languages such as <a href="https://swagger.io/docs/specification/about/">openapi</a>, <a href="https://grpc.io/">grpc</a> and similar tools. ADL has some key benefits compared with such tools including:</p>
+<ul>
+<li>parameterized types (aka generics)</li>
+<li><a href="https://github.com/timbod7/adl/blob/master/docs/backend-haskell.md#custom-types">custom type mappings</a></li>
+<li>general purpose <a href="https://github.com/timbod7/adl/blob/master/docs/language.md#annotations">annotations</a></li>
+</ul>
+<p>More importantly ADL differs in that it is intended as a general purpose tool for data modelling. Here we are using in to specify an API, but it also appropriate for other purposes (eg specifying relational data models, automatically generated forms, <a href="https://tim.dockerz.net/posts/2019-09-17-hadl-haskell.html">type checked configuration files</a>, etc)</p>
+<h1 id="our-application-and-its-api">Our application and it's API</h1>
+<p>Our sample application is somewhat of a cliche: a multi-user message board. It will have the following features:</p>
+<ul>
+<li>Users must login to access the application</li>
+<li>Once logged in, users can view recent messages and post new messages</li>
+<li>Certain users will have "admin" privileges and they are able to create new users.</li>
+</ul>
+<p>Our API will be implemented conventionally: as JSON messages passed over HTTP. Given a specification of the API in ADL, the ADL compiler will be used to translate that specification into types and values in our programming languages of choice (here: haskell, rust and typescript). Then, in each of those programming languages we will write generic library code to interpret that specification and implement the boilerplate associated with serialization, validation, and authorization. We will be left to implement just the application logic itself.</p>
+<p>ADL doesn't have any baked in knowledge of the HTTP protocol. So we must start by declaring a data type that captures our specification for an HTTP request. In our simplified API, all requests will be HTTP post requests. If one desired a more "<a href="https://en.wikipedia.org/wiki/Representational_state_transfer">RESTy</a>" api then there would be similar definitions for the other HTTP methods.</p>
+<pre><code>// A post request with request body of type I, and response
+// body of type O
+struct HttpPost&lt;I,O&gt; {
+  String path;
+  HttpSecurity security;
+  TypeToken&lt;I&gt; reqType = null;
+  TypeToken&lt;O&gt; respType = null;
+};
+
+union HttpSecurity {
+  // The endpoint is publically accessible
+  Void public;
+
+  // A JWT is required in a bearer authoration header
+  Void token;
+
+  // A JWT with an admin claim is required in a bearer authoration header
+  Void adminToken;
+};</code></pre>
+<p>Let's pull this definition apart. For each API request we can make we need to specify:</p>
+<ul>
+<li>the type of the request body sent to the server: <code>I</code></li>
+<li>the type of the response returned to the client: <code>O</code></li>
+<li>the http path for this request</li>
+<li>the authorization rules for this endpoint.</li>
+</ul>
+<p>As per the subsequent <code>HttpSecurity</code> definition, in our simple security model API endpoints can be public, or require a token (proving that a user has logged in), or requiring an admin token (proving that a user has logged in and has admin rights).</p>
+<p>The <code>HttpPost</code> structure captures all this information as a runtime value which we will interpret with library code to implement all of the boilerplate for our the endpoints. Hence we will need access to a runtime representation of the <code>I</code> and <code>O</code> types using the ADL <code>TypeToken&lt;&gt;</code> primitive.</p>
+<p>This all probably seems a bit abstract, so lets now use <code>HttpPost</code> to define our first endpoint:</p>
+<pre><code>struct Api {
+
+  HttpPost&lt;LoginReq,LoginResp&gt; login = {
+    &quot;path&quot; : &quot;/login&quot;,
+    &quot;security&quot; : &quot;public&quot;
+  };
+  
+  ...
+};
+
+struct LoginReq {
+  Email email;
+  String password;
+};
+
+union LoginResp {
+  Jwt success;
+  Void failure;
+};
+
+type Jwt = String;
+type Email = String;</code></pre>
+<p>Our runtime inspectable API will be a value of type <code>Api</code>. This is a struct, with a field for each request endpoint. We use the ADL <a href="https://github.com/timbod7/adl/blob/master/docs/language.md#default-values">defaulting mechanism</a> to specify the values associated with each endpoint.</p>
+<p>As you can see above, the login endpoint will accept a Json serialized value of type <code>LoginReq</code>, and return a <code>LoginResp</code> sum type value, with a <a href="https://en.wikipedia.org/wiki/JSON_Web_Token">Json Web Token</a> on success. It's a public endpoint, so doesn't require authentication to call.</p>
+<p>Let's flesh out the remaining API methods to complete our API definition:</p>
+<pre><code>struct Api {
+  /// Login to obtain an authorization token
+  HttpPost&lt;LoginReq,LoginResp&gt; login = {
+    &quot;path&quot; : &quot;/login&quot;,
+    &quot;security&quot; : &quot;public&quot;
+  };
+
+  /// Retrieve recent messages posted to the server
+  HttpPost&lt;RecentMessagesReq,Vector&lt;Message&gt;&gt; recentMessages = {
+    &quot;path&quot; : &quot;/recent-messages&quot;,
+    &quot;security&quot; : &quot;token&quot;
+  };
+
+  /// Post a new message
+  HttpPost&lt;NewMessageReq,Empty&gt; newMessage = {
+    &quot;path&quot; : &quot;/new-message&quot;,
+    &quot;security&quot; : &quot;token&quot;
+  };
+
+  /// Create a new user, recording their hashed password
+  HttpPost&lt;CreateUserReq,CreateUserResp&gt; createUser = {
+    &quot;path&quot; : &quot;/create-user&quot;,
+    &quot;security&quot; : &quot;adminToken&quot;
+  };
+
+  /// Trivial public method to test server liveness
+  HttpPost&lt;Empty,Empty&gt; ping = {
+    &quot;path&quot; : &quot;/ping&quot;,
+    &quot;security&quot; : &quot;public&quot;
+  };
+};
+
+...
+
+struct NewMessageReq {
+  String body;
+};
+
+struct RecentMessagesReq {
+  Int32 maxMessages;
+};
+
+struct CreateUserReq {
+  Email email;
+  Password password;
+  Bool isAdmin;
+};
+
+union CreateUserResp {
+  UserId success;
+  Void duplicateEmail;
+};
+
+struct Message {
+  String id;
+  Email postedBy;
+  TimeStamp postedAt;
+  String body;
+};</code></pre>
+<p>Hopefully these methods should be fairly self explanatory.</p>
+<p>The <a href="https://github.com/timbod7/adl-demo">timbod7/adl-demo</a> github repository will host the code for this blog post series. It currently contains</p>
+<ul>
+<li>the <a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/adl">ADL definitions</a></li>
+<li>the <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/scripts/generate-adl.sh">script</a> to do the code generation</li>
+<li>the generated <a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/haskell/src/ADL">haskell</a> and <a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/typescript/src/adl">typescript</a></li>
+</ul>
+<p>Feel free to ask questions in this repo's issue tracker.</p>
+<h1 id="next">Next...</h1>
+<p>The API is defined, my next post will implement a compliant server in haskell. My previous post on <a href="https://tim.dockerz.net/posts/2019-09-17-hadl-haskell.html">using ADL from haskell</a> may be useful background reading.</p>
+      </article>
+    </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-content">
+     <a href="/atom/all.xml"><div >RSS Feed</div></a>
+  </div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>
