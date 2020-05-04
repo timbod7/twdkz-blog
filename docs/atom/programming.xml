@@ -2,12 +2,362 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/programming.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-04-25T07:05:20Z</updated>
+  <updated>2020-05-04T22:21:25Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
   <id>https://tim.dockerz.net/</id>
 
+  <entry>
+      <title>Implementing an ADL API in haskell</title>
+      <link href="https://tim.dockerz.net//posts/2020-05-01-adl-example-haskell.html"/>
+      <id>https://tim.dockerz.net//posts/2020-05-01-adl-example-haskell.html</id>
+      <updated>2020-05-01T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        <h1 id="introduction">Introduction</h1>
+<p>This is the second post in a series where we use <a href="https://github.com/timbod7/adl">ADL</a> to build a multi-language system with consistent types. In the <a href="/posts/2020-04-24-adl-example-api.html">first post</a> we wrote the specification for the API. In this post we will implement a server for the API in haskell. This post presents key snippets of the server code - follow the links to the <a href="https://github.com/timbod7/adl-demo">source code repo</a> to see these in context.</p>
+<h1 id="our-tools">Our tools</h1>
+<p>We'll keep our code small and leverage the haskell ecosystem by making use of the following libraries:</p>
+<ul>
+<li>The <a href="https://hackage.haskell.org/package/Spock">Spock</a> web framework</li>
+<li><a href="https://hackage.haskell.org/package/password-1.0.0.0">Data.Password</a> for secure password management</li>
+<li><a href="https://hackage.haskell.org/package/jwt-0.10.0">Web.JWT</a> for Json Web Token functions</li>
+</ul>
+<h1 id="the-code-structure">The code structure</h1>
+<p>For reference, the project code structure is as below. There are also the usual files to support stack and cabal.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/adl"><code>messageboard-api/adl/*</code></a></td>
+<td style="text-align: left;">the ADL definitions</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/scripts/generate-adl.sh"><code>messageboard-api/scripts/generate-adl.sh</code></a></td>
+<td style="text-align: left;">script to generate code from ADL</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/haskell/src/ADL"><code>messageboard-api/haskell/src/ADL/*</code></a></td>
+<td style="text-align: left;">haskell code generated from the ADL</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Main.hs"><code>messageboard-api/haskell/src/Main.hs</code></a></td>
+<td style="text-align: left;">startup and config parsing</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Server.hs"><code>messageboard-api/haskell/src/Server.hs</code></a></td>
+<td style="text-align: left;">the server implementation</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Utils.hs"><code>messageboard-api/haskell/src/Utils.hs</code></a></td>
+<td style="text-align: left;">server helper functions</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/server-config.yaml"><code>messageboard-api/haskell/server-config.yaml</code></a></td>
+<td style="text-align: left;">a server config file for testing</td>
+</tr>
+</tbody>
+</table>
+<h1 id="configuration-and-scaffolding">Configuration and scaffolding</h1>
+<p>There's not much to do here. Our server <code>main</code> loads configuration, creates initial state, and launches spock. As described <a href="/posts/2020-05-01-adl-example-haskell.html">previously</a>, by defining our configuration in ADL:</p>
+<pre><code>struct ServerConfig {
+
+  /// The port which accepts http connections
+  Int32 port = 8080;
+
+  /// The secret used to sign the server&#39;s json web tokens
+  String jwtSecret;
+};</code></pre>
+<p>we can use the ADL generated haskell code to validate and parse a YAML config file into a well typed <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/ADL/Config.hs#L17">haskell value</a>.</p>
+<p>Loading the configuration is really the only point of interest in the scaffolding. After than, we just have to create our initial application state, and then launch spock:</p>
+<pre><code>main :: IO ()
+main = do
+  args &lt;- getArgs
+  case args of
+    [configPath] -&gt; do
+      eConfig &lt;- adlFromYamlFile configPath
+      case eConfig of
+        (Left emsg) -&gt; exitWithError (T.unpack emsg)
+        (Right config) -&gt; startServer config
+    _ -&gt; exitWithError &quot;Usage: server &lt;config.yaml&gt;&quot;
+  
+startServer :: ServerConfig -&gt; IO ()
+startServer sc = do
+  state &lt;- initAppState sc
+  spockCfg &lt;- defaultSpockCfg EmptySession PCNoDatabase state
+  runSpock (fromIntegral (sc_port sc)) (spock spockCfg serverApp)</code></pre>
+<p>(see <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Main.hs#L29">Main.hs</a>)</p>
+<h1 id="our-server-structure">Our server structure</h1>
+<p>We are using the ADL API definition discussed in the <a href="/posts/2020-04-24-adl-example-api.html">previous post</a>. For the purpose of this example, we will keep the application state in server memory and use haskell <a href="https://hackage.haskell.org/package/stm">STM</a> to manage concurrent access. (In a future post I'll show how we can implement a persistence layer that leverages ADL to define the persisted data model). Our application needs to maintain a list of the users allows to login, and the messages that have been sent. Here's the core state declaration:</p>
+<pre><code>data User = User {
+  u_email :: T.Text,
+  u_hashedPassword :: T.Text,
+  u_isAdmin :: Bool
+}
+
+data MyAppState = MyAppState {
+  mas_serverConfig :: ServerConfig,
+  mas_users:: TVar [User],             -- the users that can login
+  mas_messages:: TVar [API.Message]    -- the messages that have been posted
+}</code></pre>
+<p>(see <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Server.hs#L29">Server.hs</a>)</p>
+<p>Our spock endpoint handlers will have a somewhat intimidating return type:</p>
+<pre><code>type MyHandler o = ActionCtxT MyContext (WebStateM () MySession MyAppState) o</code></pre>
+<p>I recommend reading the spock documentation to understand this in detail, but in the context of this post, it's enough to know that <code>MyHandler</code> is a Monad within which one can</p>
+<ul>
+<li>use <code>liftIO</code> to run <code>IO</code> actions.</li>
+<li>use <code>getState</code> to access the <code>MyAppState</code> value</li>
+</ul>
+<p>Let's delve into to the details of the login API endpoint. It has the following ADL definition:</p>
+<pre><code>  HttpPost&lt;LoginReq,LoginResp&gt; login = {
+    &quot;path&quot; : &quot;/login&quot;,
+    &quot;security&quot; : &quot;public&quot;
+  };
+
+struct LoginReq {
+  Email email;
+  String password;
+};
+
+union LoginResp {
+  Jwt success;
+  Void failure;
+};</code></pre>
+<p>which, thanks to the ADL compiler, results in haskell definitions for <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/ADL/Api.hs#L103">LoginReq</a>, <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/ADL/Api.hs#L124">LoginResp</a>, and the http request <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/ADL/Api.hs#L47">metadata</a>.</p>
+<p>So our login handler will have the following signature:</p>
+<pre><code>handleLogin :: API.LoginReq -&gt; MyHandler API.LoginResp</code></pre>
+<p>We will write a helper function <code>adlPost</code> that, given the appropriate <code>HttpPost&lt;I,O&gt;</code> metadata connects our handler to the spock server. By "connects" I mean that it will:</p>
+<ul>
+<li>route post requests with the declared path</li>
+<li>check authentication</li>
+<li>deserialize and validate the post request body into the appropriate <code>I</code> value</li>
+<li>call our handler implementation</li>
+<li>serialize the <code>O</code> value, and send it as the post response body.</li>
+</ul>
+<p>The <code>adlPost</code> helper function will have the following signature:</p>
+<pre><code>adlPost :: (AdlValue i, AdlValue o)
+        =&gt; HttpPost i o
+        -&gt; (i -&gt; MyHandler o)
+        -&gt; SpockCtxM ctx conn sess MyAppState ()</code></pre>
+<p>(The actual implementation will have a slightly more general type to avoid dependence on <code>MyAppState</code> - see below).</p>
+<p>This helper function makes implement the spock API very easy. Our spock server is implemented simply by connecting each handler:</p>
+<pre><code>serverApp :: SpockM () MySession MyAppState ()
+serverApp = do
+  let api = API.mkApi
+  adlPost (API.api_login api) handleLogin
+  adlPost (API.api_newMessage api) handleNewMessage
+  adlPost (API.api_recentMessages api) handleRecentMessages
+  adlPost (API.api_createUser api) handleCreateUser
+  adlPost (API.api_ping api) handlePing</code></pre>
+<p>(see <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Server.hs#L57">Server.hs</a>)</p>
+<p>with each handler having the expected, strongly typed signature:</p>
+<pre><code>handleLogin :: API.LoginReq -&gt; MyHandler API.LoginResp
+handleNewMessage :: API.NewMessageReq -&gt; MyHandler Empty
+handleRecentMessages :: API.RecentMessagesReq -&gt; MyHandler [API.Message]
+handleCreateUser :: API.CreateUserReq -&gt; MyHandler API.CreateUserResp</code></pre>
+<h1 id="implementing-adlpost">Implementing <code>adlPost</code></h1>
+<p>As described above, the <code>adlPost</code> function will deal with the endpoint routing, authentication, validation and serialization, ie pretty much all of the boilerplate code typically required for an endpoint. Whilst it has quite a lot to do, it's relatively concise - lets show the code in full here:</p>
+<pre><code>-- | Add a spock route implementing an http post request, with the specification for
+-- the request supplied as a value of type HttpPost.
+--
+-- Assuming a request body of type i, and a response body of type o, the resulting
+-- handler implements JWT based authorization checks, and request and response parsing
+-- and serialization.
+adlPost :: (AdlValue i, AdlValue o, HasJwtSecret st)
+        =&gt; HttpPost i o
+        -&gt; (i -&gt; ActionCtxT (Maybe JWTClaimsSet) (WebStateM conn sess st) o)
+        -&gt; SpockCtxM ctx conn sess st ()
+adlPost postmeta handler = prehook checkAuth $ post path runRequest
+  where
+    path = fromString (T.unpack (hp_path postmeta))
+
+    checkAuth = do
+      jwtSecret &lt;- getJwtSecret &lt;$&gt; getState
+      case hp_security postmeta of
+        HS_public -&gt; return Nothing
+        HS_token -&gt; Just &lt;$&gt; getVerifiedJwtClaims jwtSecret
+        HS_adminToken -&gt; do
+          claims &lt;- getVerifiedJwtClaims jwtSecret
+          when (not (isAdmin claims)) $ do
+            error401 &quot;needs admin&quot;
+          return (Just claims)
+
+    runRequest = do
+      mjv &lt;- jsonBody
+      case mjv of
+        Nothing -&gt; error400 &quot;json body not well formed&quot;
+        (Just jv) -&gt; do
+          let pv = runJsonParser jsonParser [] jv
+          case decodeAdlParseResult &quot; from post body &quot; pv of
+            Left e -&gt; error400 e
+            Right i -&gt; do
+              o &lt;- handler i
+              json (adlToJson o)</code></pre>
+<p>(see <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Utils.hs#L36">Utils.hs</a>)</p>
+<p>It takes two parameters: <code>postmeta</code> is metadata describing the post request, and <code>handler</code> is the application handler function. The request and response bodies (type <code>i</code> and <code>o</code>) must be ADL values, (which they will be given that the postmeta value was generated by the ADL compiler). Our type signature is generalized from that show previously in that it can work with any spock state (type <code>st</code>) provided that we have a means of extracting a jwt secret from that state. This secret is needed to validate JWTs and hence check authorization.</p>
+<p>It return a monadic value of type <code>SpockCtxM</code> which we used above to actually create the spock handler.</p>
+<p><code>adlPost</code> works in two phases - it runs <code>checkAuth</code> as a <a href="http://hackage.haskell.org/package/Spock-core-0.13.0.0/docs/Web-Spock-Core.html#v:prehook">spock prehook</a>, and then runs the request as a <a href="http://hackage.haskell.org/package/Spock-core-0.13.0.0/docs/Web-Spock-Core.html#v:post">spock post action</a>.</p>
+<p><code>checkAuth</code> performs case analysis to ensure that the incoming request meets the security requirements for the endpoint as per the <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/adl/api.adl">api spec</a>. If the endpoint is public there is no check to perform. If the endpoint requires a token, we verify that the request has a correctly signed Json Web Token. If the endpoint requires an admin token, we also verify that the valid JWT has an <code>isAdmin</code> claim. The prehook returns the JWT, which hence becomes the spock request context. This context is accessible in request handlers.</p>
+<p>Assuming that we pass the authorization checks, <code>runRequest</code></p>
+<ul>
+<li>extracts the post request body as json</li>
+<li>parses the json into a value of type <code>i</code></li>
+<li>calls the application handler</li>
+<li>serializes the result of type <code>o</code> into json</li>
+<li>sends that response back to the API client (with a response code of 200)</li>
+</ul>
+<p>If either of the first two steps fails, a bad request (400) response code will result.</p>
+<p>Whew! Quite a lot of explanatory text for a small function. But it's a tribute to haskell's expressiveness that we can write a function sufficiently abstract that that it implements the API boilerplate for our whole API.</p>
+<h1 id="implementing-the-application-logic">Implementing the application logic</h1>
+<p>Whilst the main goal for this post was to demonstrate ADL API definitions, let's complete the server by fleshing out the API application logic. We've got 4 methods to implement:</p>
+<h2 id="handlelogin--apiloginreq---myhandler-apiloginresp"><code>handleLogin :: API.LoginReq -&gt; MyHandler API.LoginResp</code></h2>
+<p>The login endpoint needs to</p>
+<ul>
+<li>verify that a user with the given email address exists</li>
+<li>verify that the password supplied matches the stored scrypt hash</li>
+<li>construct a JWT for the user that embeds the email address and login</li>
+</ul>
+<p>The JWT (<a href="https://jwt.io/introduction/">JSON Web Token</a>) is returned to the client, and is subequently provided to the server as proof that a login has succeeded.</p>
+<p>See <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Server.hs#L69">Server.handleLogin</a> for the implementation code.</p>
+<h2 id="handlenewmessage--apinewmessagereq---myhandler-empty"><code>handleNewMessage :: API.NewMessageReq -&gt; MyHandler Empty</code></h2>
+<p>The new message endpoint simply accepts message text from the client, and appends it and some metadata to the message list in the server state. The implementation accesses the spock request context to recover the JWT (already validated by <code>postAdl</code>), in order to determine the email of the user posting the message.</p>
+<p>See <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Server.hs#L94">Server.handleNewMessage</a> for the implementation code.</p>
+<h2 id="handlerecentmessages--apirecentmessagesreq---myhandler-apimessage"><code>handleRecentMessages :: API.RecentMessagesReq -&gt; MyHandler [API.Message]</code></h2>
+<p>This endpoint is trivial - the handler just needs to extract the requested number of messages from the application state, and return them to the client.</p>
+<p>See <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Server.hs#L110">Server.handleRecentMessages</a> for the implementation code.</p>
+<h2 id="handlecreateuser--apicreateuserreq---myhandler-apicreateuserresp"><code>handleCreateUser :: API.CreateUserReq -&gt; MyHandler API.CreateUserResp</code></h2>
+<p>In our application, only admin users are authorized to create new users, but that is specified in the API definition, and hence is checked before the handler is called. The handler must:</p>
+<ul>
+<li>verify that there is not an existing user with the requested email address, and if this is the case, indicate it to the client.</li>
+<li>hash the provided password, and add the new user to the application state.</li>
+</ul>
+<p>See <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/haskell/src/Server.hs#L117">Server.handleCreateUser</a> for the implementation code.</p>
+<h1 id="testing">Testing</h1>
+<p>If you've checked out the <a href="https://github.com/timbod7/adl-demo">project source code</a>, you can build and run the server with stack:</p>
+<pre><code>$ cd messageboard-api/haskell
+$ stack run messageboard-server server-config.yaml
+
+spock is running on port 8080</code></pre>
+<p>Whilst we plan to build a strongly typed client for the API, we can test it now via curl. For demo purposes the initial app state includes a test user. Let's try issuing a post login request with an empty body:</p>
+<pre><code>$ curl http://localhost:8080/login -d &#39;{}&#39;
+Unable to parse a value of type api.LoginReq from post body : expected field email at $</code></pre>
+<p>OK - the 400 error tells us what is wrong with our request. Let's fill it in correctly with the test user's details (as per the ADL <code>LoginReq</code> type):</p>
+<pre><code>$ curl http://localhost:8080/login -d &#39;{
+  &quot;email&quot;: &quot;admin@test.com&quot;,
+  &quot;password&quot;: &quot;xyzzy&quot;
+}&#39;
+
+{&quot;success&quot;:&quot;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHRlc3QuY29tIiwiYWRtaW4iOnRydWV9.1mZfzhRO_hubbFI2LNBj7wnYUwThTMlSfVaawenX33Y&quot;}$ </code></pre>
+<p>Success. We now have a JWT for future requests as the initial test user. Put it in a shell variable, and let's see if there are any messages:</p>
+<pre><code>$ JWT=...token...
+$ curl http://localhost:8080/recent-messages -H &quot;Authorization:Bearer $JWT&quot; -d &#39;{
+  &quot;maxMessages&quot;: 10
+}&#39;
+
+[]</code></pre>
+<p>No. So let's post a few:</p>
+<pre><code>$ curl http://localhost:8080/new-message -H &quot;Authorization:Bearer $JWT&quot; -d &#39;{
+  &quot;body&quot;: &quot;First post!&quot;
+}&#39;
+
+{}
+$ curl http://localhost:8080/new-message -H &quot;Authorization:Bearer $JWT&quot; -d &#39;{
+  &quot;body&quot;: &quot;and a followup&quot;
+}&#39;
+
+{}</code></pre>
+<p>... and check that we can fetch them (using <a href="https://stedolan.github.io/jq/">jq</a> to tidy up the formatting):</p>
+<pre><code>$ curl -s http://localhost:8080/recent-messages -H &quot;Authorization:Bearer $JWT&quot; -d &#39;{
+  &quot;maxMessages&quot;: 10
+}&#39; | jq .
+
+[
+  {
+    &quot;body&quot;: &quot;and a followup&quot;,
+    &quot;postedAt&quot;: &quot;2020-05-04T09:32:11.258139377&quot;,
+    &quot;postedBy&quot;: &quot;admin@test.com&quot;,
+    &quot;id&quot;: &quot;2&quot;
+  },
+  {
+    &quot;body&quot;: &quot;First post!&quot;,
+    &quot;postedAt&quot;: &quot;2020-05-04T09:31:04.024827574&quot;,
+    &quot;postedBy&quot;: &quot;admin@test.com&quot;,
+    &quot;id&quot;: &quot;1&quot;
+  }
+]</code></pre>
+<p>Finally, let's create a new user, and excercise the API as that user:</p>
+<pre><code>$ curl -s http://localhost:8080/create-user -H &quot;Authorization:Bearer $JWT&quot; -d &#39;{
+  &quot;email&quot;: &quot;user@test.com&quot;,
+  &quot;password&quot;: &quot;notmuchofapassword&quot;,
+  &quot;isAdmin&quot;: false
+}&#39;
+
+{&quot;success&quot;:&quot;2&quot;}
+
+$ curl http://localhost:8080/login -d &#39;{
+  &quot;email&quot;: &quot;user@test.com&quot;,
+  &quot;password&quot;: &quot;notmuchofapassword&quot;
+}&#39;
+
+{&quot;success&quot;:&quot;eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InVzZXJAdGVzdC5jb20iLCJhZG1pbiI6ZmFsc2V9.48FYSck2FwaBwQgwhBIiQVH7ks5rmcvcPmSwoEpBZ6E&quot;}
+
+$ JWT2=...token...
+$ curl http://localhost:8080/new-message -H &quot;Authorization:Bearer $JWT2&quot; -d &#39;{
+  &quot;body&quot;: &quot;Greetings!&quot;
+}&#39;
+
+{}
+
+$ curl -s http://localhost:8080/recent-messages -H &quot;Authorization:Bearer $JWT2&quot; -d &#39;{
+  &quot;maxMessages&quot;: 10
+}&#39; | jq .
+
+[
+  {
+    &quot;body&quot;: &quot;Greetings!&quot;,
+    &quot;postedAt&quot;: &quot;2020-05-04T09:45:16.443301183&quot;,
+    &quot;postedBy&quot;: &quot;user@test.com&quot;,
+    &quot;id&quot;: &quot;3&quot;
+  },
+  {
+    &quot;body&quot;: &quot;and a followup&quot;,
+    &quot;postedAt&quot;: &quot;2020-05-04T09:32:11.258139377&quot;,
+    &quot;postedBy&quot;: &quot;admin@test.com&quot;,
+    &quot;id&quot;: &quot;2&quot;
+  },
+  {
+    &quot;body&quot;: &quot;First post!&quot;,
+    &quot;postedAt&quot;: &quot;2020-05-04T09:31:04.024827574&quot;,
+    &quot;postedBy&quot;: &quot;admin@test.com&quot;,
+    &quot;id&quot;: &quot;1&quot;
+  }
+]</code></pre>
+<h1 id="summing-up">Summing up</h1>
+<p>With only a small amount of code, we have implemented our API in haskell, and abstracted out all of the boilerplate code associated with:</p>
+<ul>
+<li>de/serialization</li>
+<li>validation</li>
+<li>authorization</li>
+</ul>
+<p>leaving us to implement the application logic in a strongly typed framework. Hopefully the utility of using ADL to specify the API and associated data types is apparent. ADL's value increases with a more realistic project where:</p>
+<ul>
+<li>multiple languages are involved</li>
+<li>the API grows, with more endpoints and more complex data types</li>
+<li>the API evolves over time</li>
+</ul>
+<p>In my next post, I will demonstrate how we can build a typescript client for this API.</p>
+<p>Feel free to post questions and comments as issues on the <a href="https://github.com/timbod7/adl-demo">project repo</a>.</p>
+      ]]></content>
+  </entry>
   <entry>
       <title>API specifications in ADL</title>
       <link href="https://tim.dockerz.net//posts/2020-04-24-adl-example-api.html"/>
