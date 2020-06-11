@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/all.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-05-05T13:39:25Z</updated>
+  <updated>2020-06-11T22:36:31Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
@@ -1698,6 +1698,201 @@ $ curl -s http://localhost:8080/recent-messages -H &quot;Authorization:Bearer $J
 <li>the API evolves over time</li>
 </ul>
 <p>In my next post, I will demonstrate how we can build a typescript client for this API.</p>
+<p>Feel free to post questions and comments as issues on the <a href="https://github.com/timbod7/adl-demo">project repo</a>.</p>
+      ]]></content>
+  </entry>
+  <entry>
+      <title>A typescript client for an ADL API</title>
+      <link href="https://tim.dockerz.net//posts/2020-05-22-adl-example-typescript.html"/>
+      <id>https://tim.dockerz.net//posts/2020-05-22-adl-example-typescript.html</id>
+      <updated>2020-05-22T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        <h1 id="introduction">Introduction</h1>
+<p>This is the third post in a series where we use <a href="https://github.com/timbod7/adl">ADL</a> to build a multi-language system with consistent types. Previously, we have</p>
+<ul>
+<li><a href="/posts/2020-04-24-adl-example-api.html">defined the API in ADL</a></li>
+<li><a href="/posts/2020-05-01-adl-example-haskell.html">implemented a server for the API in haskell</a></li>
+</ul>
+<p>Here we will implement a statically typed client for the API in typescript.</p>
+<p>I think that typescript is presently a sweet spot for web development: it has a decent static type system; it integrates trivially with the rest of the javascript ecosystem; and it has achieved mainstream acceptance. Using ADL to ensure consistent types between the server and a typescript web application greatly boosts developer productivity, especially over time as the API grows.</p>
+<h1 id="our-tools">Our tools</h1>
+<p>In this post we will focus on a client library for the API, so our external dependencies will be limited. Later, we will create a full web application.</p>
+<p>We'll keep our code small and leverage the typescript ecosystem, making use of just a <a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/typescript/package.json">few external dependencies</a>. At runtime:</p>
+<ul>
+<li><a href="https://www.npmjs.com/package/node-fetch">node-fetch</a> is used to so we can make API calls from the node VM (as well as the browser).</li>
+<li><a href="https://www.npmjs.com/package/base64-js">base64-js</a> is required by the ADL typescript runtime</li>
+</ul>
+<h1 id="the-code-structure">The code structure</h1>
+<p>For reference, the project code structure is as below. There are also the usual files to support typescript and yarn/npm.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">File</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/adl"><code>messageboard-api/adl/*</code></a></td>
+<td style="text-align: left;">the ADL definitions</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/scripts/generate-adl.sh"><code>messageboard-api/scripts/generate-adl.sh</code></a></td>
+<td style="text-align: left;">script to generate code from ADL</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/tree/master/messageboard-api/typescript/src/adl"><code>messageboard-api/typescript/src/adl/*</code></a></td>
+<td style="text-align: left;">typescript code generated from the ADL</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/typescript/src/service/service.ts"><code>messageboard-api/typescript/src/service/service.ts</code></a></td>
+<td style="text-align: left;">The service implementation</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/typescript/src/service/http.ts"><code>messageboard-api/typescript/src/service/http.ts</code></a></td>
+<td style="text-align: left;">Abstraction for http communications</td>
+</tr>
+</tbody>
+</table>
+<h1 id="an-http-abstraction">An http abstraction</h1>
+<p>We want to be able to make typed API requests from both the browser, and also from a nodejs VM. However the underlying machinery for making http requests differs in those environments. Hence we will build our typed API atop a trivial <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/typescript/src/service/http.ts">http abstraction</a>:</p>
+<pre><code>export interface HttpFetch {
+  fetch(request: HttpRequest): Promise&lt;HttpResponse&gt;;
+}
+
+export interface HttpHeaders {
+  [index: string]: string;
+}
+
+export interface HttpRequest {
+  url: string;
+  headers: HttpHeaders;
+  method: &quot;get&quot; | &quot;put&quot; | &quot;post&quot;;
+  body?: string;
+}
+
+export interface HttpResponse {
+  status: number;
+  statusText: string;
+  ok: boolean;
+  text(): Promise&lt;string&gt;;
+  json(): Promise&lt;{} | null&gt;;
+}</code></pre>
+<p>The two implementations of this are <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/typescript/src/service/node-http.ts">node-http.ts</a> and <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/typescript/src/service/browser-http.ts">browser-http.ts</a>.</p>
+<h1 id="request-types-and-the-api-interface">Request types and the Api interface</h1>
+<p>Referring back to the <a href="/posts/2020-04-24-adl-example-api.html">original API design</a>, there are two distinct types of requests: those that are public and don't require an auth token, and the authenticated requests that do. A public request in the ADL of type <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/adl/types.adl#L17"><code>HttpPost&lt;I,O&gt;</code></a> will be mapped to a <code>ReqFn&lt;I,O&gt;</code> in typescript:</p>
+<pre><code>export type ReqFn&lt;I, O&gt; = (req: I) =&gt; Promise&lt;O&gt;;</code></pre>
+<p>whereas an authenticated request in the ADL of type <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/adl/types.adl#L17"><code>HttpPost&lt;I,O&gt;</code></a> will be mapped to an <code>AuthReqFn&lt;I,O&gt;</code> in typescript:</p>
+<pre><code>export type AuthReqFn&lt;I, O&gt; = (authToken: string, req: I) =&gt; Promise&lt;O&gt;;</code></pre>
+<p>Given these types, our service matching the ADL type <code>Api</code> will meet this typescript interface:</p>
+<pre><code>import * as API from &quot;../adl/api&quot;;
+
+interface Api {
+  login: ReqFn&lt;API.LoginReq, API.LoginResp&gt;;
+  ping: ReqFn&lt;Empty, Empty&gt;;
+  newMessage: AuthReqFn&lt;API.NewMessageReq,Empty&gt;;
+  recentMessages: AuthReqFn&lt;API.RecentMessagesReq,API.Message[]&gt;;
+  createUser: AuthReqFn&lt;API.CreateUserReq,API.CreateUserResp&gt;;
+};</code></pre>
+<p>The typescript code generated from the ADL contains sufficient metadata to be able to derive both the <code>ReqFn&lt;&gt;</code> or <code>AuthReqFn&lt;&gt;</code> without hand written code. As a concrete example, consider the the <code>recentMessages</code> ADL endpoint definition:</p>
+<pre><code>  HttpPost&lt;RecentMessagesReq,Vector&lt;Message&gt;&gt; recentMessages = {
+    &quot;path&quot; : &quot;/recent-messages&quot;,
+    &quot;security&quot; : &quot;token&quot;
+  };</code></pre>
+<p>The typescript function that implements this will have type <code>AuthReqFn&lt;API.RecentMessagesReq,API.Message[]&gt;</code> and needs to:</p>
+<ul>
+<li>Serialise the value of type <code>RecentMessagesReq</code> to json</li>
+<li>Make an http post request to the <code>/recent-messages</code> path, with the json body and the provided auth token in the <code>Authorization</code> header.</li>
+<li>Wait for the response</li>
+<li>Deserialise the json response to a value of type <code>Message[]</code> and return as the result of the promise.</li>
+</ul>
+<p>We need equivalent logic for every authenticated request. The public requests are almost the same, leaving out the auth token and header.</p>
+<p>In our typescript API client, we put the code for this abstracted request logic in the <code>ServiceBase</code> class:</p>
+<pre><code>import { HttpFetch, HttpRequest } from &quot;./http&quot;;
+import * as ADL from &quot;../adl/runtime/adl&quot;;
+import { HttpPost } from &quot;../adl/types&quot;;
+
+export class ServiceBase {
+  
+   constructor(
+    private readonly http: HttpFetch,
+    private readonly baseUrl: string,
+    private readonly resolver: ADL.DeclResolver,
+  ) {
+  }
+  
+  mkPostFn&lt;I, O&gt;(rtype: HttpPost&lt;I, O&gt;): ReqFn&lt;I, O&gt; {...}
+
+  mkAuthPostFn&lt;I, O&gt;(rtype: HttpPost&lt;I, O&gt;): AuthReqFn&lt;I, O&gt; {...}
+};</code></pre>
+<p>This class constructor needs the request abstraction <code>http</code>, the <code>baseUrl</code> to which requests will be made, and also the ADL <code>resolver</code>. A <code>DeclResolver</code> provides access to metadata for all ADL declarations. The class provides two member functions for constructing <code>ReqFn</code> or <code>AuthReqFn</code> values from ADL API endpoint definitions. The <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/typescript/src/service/service-base.ts">implementation</a> of these two functions is straightforward.</p>
+<h1 id="the-implementation">The implementation</h1>
+<p>Given these functions in the <code>ServiceBase</code> class, the implementation of our client is straightforward. The entire code is:</p>
+<pre><code>import { HttpFetch } from &quot;./http&quot;;
+import * as ADL from &quot;../adl/runtime/adl&quot;;
+import * as API from &quot;../adl/api&quot;;
+import { AuthReqFn, ReqFn, ServiceBase } from &quot;./service-base&quot;;
+import { Jwt, Empty } from &quot;../adl/types&quot;;
+
+const api = API.makeApi({});
+
+// Implements typed access to the authenticated API endpoints
+export class Service extends ServiceBase {
+  constructor(
+    http: HttpFetch,
+    baseUrl: string,
+    resolver: ADL.DeclResolver,
+  ) {
+    super(http, baseUrl, resolver);
+  }
+
+  login: ReqFn&lt;API.LoginReq, API.LoginResp&gt; = this.mkPostFn(api.login);
+  ping: ReqFn&lt;Empty, Empty&gt; = this.mkPostFn(api.ping);
+  newMessage: AuthReqFn&lt;API.NewMessageReq,Empty&gt; = this.mkAuthPostFn(api.newMessage);
+  recentMessages: AuthReqFn&lt;API.RecentMessagesReq,API.Message[]&gt; = this.mkAuthPostFn(api.recentMessages);
+  createUser: AuthReqFn&lt;API.CreateUserReq,API.CreateUserResp&gt; = this.mkAuthPostFn(api.createUser);
+};</code></pre>
+<p>If a new endpoint is added to the API, then just a single line needs to be added to this implementation. And the end to end usage of ADL ensures that all of the types are consistent and compile time checked, from the server through to the client.</p>
+<h1 id="testing">Testing</h1>
+<p>First start the server, as per the <a href="/posts/2020-04-24-adl-example-api.html">previous post</a>:</p>
+<pre><code>$ cd messageboard-api/haskell
+$ stack run messageboard-server server-config.yaml
+
+spock is running on port 8080</code></pre>
+<p>Then we can write a simple typescript script to exercise our API from nodejs:</p>
+<p>After some imports:</p>
+<pre><code>import {Service} from &#39;./service/service&#39;;
+import {NodeHttp} from &#39;./service/node-http&#39;;
+import {RESOLVER} from &#39;./adl/resolver&#39;;
+import * as API from &quot;./adl/api&quot;;</code></pre>
+<p>we instantiate the service client:</p>
+<pre><code>  const http = new NodeHttp();
+  const service = new Service(http, &quot;http://localhost:8080&quot;, RESOLVER);</code></pre>
+<p>and call the public ping endpoint:</p>
+<pre><code>  await service.ping({});</code></pre>
+<p>Logging in is also a public method, but on success returns a token so that we can subsequently call authenticated methods:</p>
+<pre><code>  const resp = await service.login({
+      email: &quot;admin@test.com&quot;,
+      password: &quot;xyzzy&quot;,
+    });
+  assert(resp.kind == &#39;success&#39;);
+  const adminToken = resp.value;</code></pre>
+<p>Hence, as admin, we can post some messages:</p>
+<pre><code>  await service.newMessage(adminToken, {body: &quot;Hello message board!&quot;});
+  await service.newMessage(adminToken, {body: &quot;It&#39;s quiet around here!&quot;});```</code></pre>
+<p>The <a href="https://github.com/timbod7/adl-demo/blob/master/messageboard-api/typescript/src/service-tests.ts"><code>service-tests.ts</code></a> script exercises the API more fully. You can run it directly using the <code>ts-node</code> command.</p>
+<h1 id="summing-up">Summing Up</h1>
+<p>We now have end-to-end type safety between our server and our client, despite the fact they are written in different languages. This is a big step forward in developer productivity. For example, one can extend or refactor the API using the same approach one would in any strongly statically typed environment: change it, and then be guided by the compiler errors to find and fix affected server and browser code.</p>
+<p>I'm unsure what posts will follow in this series... I may look at:</p>
+<ul>
+<li>implementing the server in rust or typescript</li>
+<li>using ADL to define a persistence layer behind the server</li>
+<li>using this typescript API client in a react application</li>
+</ul>
 <p>Feel free to post questions and comments as issues on the <a href="https://github.com/timbod7/adl-demo">project repo</a>.</p>
       ]]></content>
   </entry>
