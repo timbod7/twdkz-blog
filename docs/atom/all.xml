@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/all.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-06-11T22:36:31Z</updated>
+  <updated>2020-06-14T09:44:54Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
@@ -1803,7 +1803,9 @@ interface Api {
     &quot;path&quot; : &quot;/recent-messages&quot;,
     &quot;security&quot; : &quot;token&quot;
   };</code></pre>
-<p>The typescript function that implements this will have type <code>AuthReqFn&lt;API.RecentMessagesReq,API.Message[]&gt;</code> and needs to:</p>
+<p>The typescript function that implements this will have type:</p>
+<pre><code>AuthReqFn&lt;API.RecentMessagesReq,API.Message[]&gt;</code></pre>
+<p>and needs to:</p>
 <ul>
 <li>Serialise the value of type <code>RecentMessagesReq</code> to json</li>
 <li>Make an http post request to the <code>/recent-messages</code> path, with the json body and the provided auth token in the <code>Authorization</code> header.</li>

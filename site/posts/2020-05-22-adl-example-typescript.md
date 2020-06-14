@@ -145,8 +145,13 @@ ADL endpoint definition:
   };
 ```  
 
-The typescript function that implements this will have type
-`AuthReqFn<API.RecentMessagesReq,API.Message[]>` and needs to:
+The typescript function that implements this will have type:
+
+```
+AuthReqFn<API.RecentMessagesReq,API.Message[]>
+```
+
+and needs to:
 
 * Serialise the value of type `RecentMessagesReq` to json
 * Make an http post request to the `/recent-messages` path, with the json body

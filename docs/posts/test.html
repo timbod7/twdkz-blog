@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en"> 
+<head profile="http://www.w3.org/2005/10/profile">
+    <meta charset="UTF-8">
+    <meta name="description" content="Haskell, electronics et al.">
+    <meta name="author" content="Tim Docker">
+    <meta name=viewport content="width=device-width, initial-scale=1">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CSS Test">
+    <meta name="twitter:description" content="">
+        <title>CSS Test</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header id="header">
+      <div class="header-content">
+        <nav class="header-left">
+            <a href="/">Home</a>
+        </nav>
+    
+        <div class="header-right">
+            <a href="/pages/about.html">About</a>
+        <a class="github-link" href="https://github.com/timbod7">
+            <img src="/images/github-logo.png" height=24 alt="Github Profile"/>
+        </a>
+    </div>
+      </div>
+    </header>
+
+<div id="page">
+    <div class="page-content">
+      <div class="masthead">
+          <span class="title">
+              CSS Test
+          </span>
+          <br>
+          <span class="byline">Tim Docker</span>
+          <br>
+          <span class="date">2020-07-01</span>
+          <br>
+          <div class="metadata">
+          </div>
+      </div>
+      <article class="post">
+          <h1 id="request-types-and-the-api-interface">Request types and the Api interface</h1>
+<p>The typescript function that implements this will have type <code>AuthReqFn&lt;API.RecentMessagesReq,API.Message[]&gt;</code> and needs to:</p>
+<ul>
+<li>Make an http post request to the <code>/recent-messages</code> path, with the json body and the provided auth token in the <code>Authorization</code> header.</li>
+<li>Deserialise the json response to a value of type <code>Message[]</code> and return as the result of the promise.</li>
+</ul>
+      </article>
+    </div>
+</div>
+
+<footer id="footer">
+  <div class="footer-content">
+     <a href="/atom/all.xml"><div >RSS Feed</div></a>
+  </div>
+</footer>
+
+<script src="/js/main.js"></script>
+</body>
+</html>
