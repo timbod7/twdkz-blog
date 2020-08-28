@@ -120,12 +120,15 @@ pre,code{
     line-height:1.4;
     background-color:#eee;
     padding: 5px;
+    overflow-wrap:break-word;
 }
 pre{
     white-space: pre-wrap;
     overflow-x:auto;
 }
 table{
+    table-layout:fixed;
+    width: 100%;
     border-spacing:0;
     border-collapse:separate
 }
@@ -199,7 +202,9 @@ body {
 
 
 #page {
+  display: flex;
   width: 100%;
+  justify-content: center;
 }
 
 .page-content {
