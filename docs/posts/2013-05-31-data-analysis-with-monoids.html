@@ -353,6 +353,10 @@ stats
 <p>An additional typeclass which I called "Aggregation" extends Monoid and provides for a broader range of computations and also cleaner result types (thanks to type families). There was some discussion when I presented this talk as to whether a single method typeclass like Aggregation was a "true" abstraction, given it has no associated laws. This is a valid point, however using it simplifies the syntax and usage of monoidal calculations significantly, and for me, this makes it worth having.</p>
 <p>There remains an elephant in the room, however, and this is space leakage. Lazy evalulation means that, as written, most of the calculations shown run in space proportional to the input data set. Appropriate strictness annotations and related modifications will fix this, but it turns out to be slightly irritating. This blog post is already long enough, so I'll address space leaks in in a subsequent post...</p>
       </article>
+      <div class="injected-comments">
+        <script defer src="https://cdn.commento.io/js/commento.js"></script>
+        <div id="commento"></div>
+      </div>
     </div>
 </div>
 

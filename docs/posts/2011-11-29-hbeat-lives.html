@@ -49,6 +49,10 @@ sudo apt-get install libsdl-mixer1.2-dev
 cabal-dev install hbeat</code></pre>
 <p>Or at least that's what I first thought. The program fired up ok, but failed to respond to mouse clicks as expected. It turns out that this was a pre-existing bug - if the screen redraws don't happen fast enough, hbeat gets further and further behind in it's event processing eventually ignoring everything. A small code fix (now published to hackage) causes out-of-date redraw requests to be dropped. But why was I seeing this problem now? It seems that since I wrote the software, openGL via SDL seems to have got alot slower. The compositing window manager (compiz) seems to be the culprit - it's consuming significant cpu time whilst hbeat is running. Some references to this can be found <a href="http://forums.libsdl.org/viewtopic.php?t=6511&amp;sid=19ba7791909f191ef4959cf13841caec">here</a>. I guess there's a downside to all those fancy compositing effects. It's a shame hbeat is now a fair bit glitchier than it was before. Maybe sometime I'll look at this, but for now at least it still works.</p>
       </article>
+      <div class="injected-comments">
+        <script defer src="https://cdn.commento.io/js/commento.js"></script>
+        <div id="commento"></div>
+      </div>
     </div>
 </div>
 
