@@ -2,12 +2,116 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/programming.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-11-13T01:03:43Z</updated>
+  <updated>2020-12-04T05:54:13Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
   <id>https://tim.dockerz.net/</id>
 
+  <entry>
+      <title>Homebrew flight simulator pedals</title>
+      <link href="https://tim.dockerz.net//posts/2020-11-23-fsim-pedals.html"/>
+      <id>https://tim.dockerz.net//posts/2020-11-23-fsim-pedals.html</id>
+      <updated>2020-11-23T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        <p>I plan to take some gliding lessons, and hope to accelerate my learning by spending some time on <a href="https://www.condorsoaring.com/">a simulator</a>. But I know this will only be worthwhile if the controls on the sim are a reasonable approximation of the real thing - you don't fly an aircraft with a keyboard and mouse. So I need some half decent controls: a joystick and pedals. It's not too hard to get an old but ok joystick on ebay, but flight sim pedals are expensive and hard to obtain here in Australia. So I set out to construct some of my own. Like all homebrew projects, this was more effort than I expected. But I'm happy with the results, and the project let me work on my 3D design and printing skills, and also some embedded rust development.</p>
+<h1 id="the-hardware">The hardware</h1>
+<p>A internet search for DIY flight pedals returns plenty of images, but few documented designs. I copied the simple mechanical arrangement commonly used, and set out to replicate it with a combination of aluminium tubing and 3D printed parts. 3D printing is excellent for small detailed components, but lacks the strength required for larger components, and takes too long to print them in any case. Hence I find that an approach using off-the-shelf dimensioned metal or timber from the local harware store, in combination with 3D printing parts works really well.</p>
+<p>The photos below show the physical construction:</p>
+<p><img src="/posts/2020-11-23-fsim-pedals/IMG_0022.JPEG" /> <img src="/posts/2020-11-23-fsim-pedals/IMG_0023.JPEG" /> <img src="/posts/2020-11-23-fsim-pedals/IMG_0024.JPEG" /></p>
+<p>The 3D modelling was done with <a href="https://solvespace.com/index.pl">solvespace</a> for some components, and <a href="https://www.openscad.org/">openscad</a> for others. I favour open source cad tools for the same reason I prefer open source software tools: I want to own my creative efforts indefinitely, and only open source tooling can ensure this.</p>
+<p>The 3D designs are relatively straightforward. If you have access to a 3D printer it's well worth lurking in places like <a href="https://hackaday.com">hackaday</a> to discover tips and trick - I use a couple here.</p>
+<p>The mounts that attach to the baseboard embed M4 nuts inside them. The idea here is that you design the model with an internal void for the nut, and arrange for the 3D printer to pause for the nuts to be inserted, after which printing is resumed and the nut ends up completely encased. A photo of the paused print:</p>
+<p><img src="/posts/2020-11-23-fsim-pedals/IMG_0007.JPEG" /></p>
+<p>The ball joints connect the pedals to the lever arm via threaded rod. These are typically manufactured in metal, and are not inexpensive. The <a href="https://www.thingiverse.com/thing:4080588">3D printed design</a> I used came straight from thingiverse. It's clever in that the ball is printed within the socket that wraps it, with a gap that is tuned to be as tight as one's printer can support. In practice the ball end up slightly fused to the socket, but one simply snaps it loose one printing is completed. I'm surprised how well these joints works - they are smooth enough in operation, and there is little slack. The non-smooth plastic on plastic connection will almost certainly wear out with enough use, but in that case it would be a quick job to reprint replacements. In summary - good enough for this purpose!</p>
+<p>Below are a couple of the components (rendered using github's built in stl renderer). You can view the other stl files in the <a href="https://github.com/timbod7/fsim-pedals/tree/master/3d-printing">project repo</a>.</p>
+<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-disk.stl"></script>
+<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/ball-joint.stl"></script>
+<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-mount.stl"></script>
+<h1 id="the-electronics">The electronics</h1>
+<p>The electronics is so simple it doesn't warrant a schematic diagram. It is an off-the-shelf <a href="https://jeelabs.org/article/1649a/">blue pill development board</a>, with a 10k linear potentiometer wired as a voltage divider on to input pin A0. Power is supplied via the USB port.</p>
+<h1 id="the-software">The software</h1>
+<p>The <a href="https://www.rust-lang.org/">rust</a> programming language intrigues me. I love the idea of a statically typed, modern programming language that can fit into the niches currently dominated by C/C++. High performance code is one such niche, but another is the ability to run "bare metal" on cheap microcontrollers.</p>
+<p>Hence while a common approach to building a custom USB <a href="https://en.wikipedia.org/wiki/USB_human_interface_device_class">HID controller</a> like this would be to use an arduino with a <a href="https://github.com/MHeironimus/ArduinoJoystickLibrary">usb joystick library</a> with code written in C++, I wanted to use rust, and chose the ubiquitous and cheap <a href="https://jeelabs.org/article/1649a/">"blue pill"</a> board. Getting an embedded development environment up and running can be a huge time suck - luckily this board is well supported in the embedded rust world, with the excellent <a href="https://github.com/TeXitoi/blue-pill-quickstart">blue-pill-quickstart</a> github template project. The project includes enough information to get up and running, and provides links to more detailed documentation. But at the end of it you've only made it as far as the "hello world" of embedded systems: a blinking led.</p>
+<p>The requirements are simple, we need:</p>
+<ul>
+<li>Code to configure and manage the USB port so that it acts as a (single axis) HID joystick.</li>
+<li>Code to measure the voltage from the potentiometer using the microcontrollers ADC (analog to digital converter), and supply it to the joystick interface</li>
+</ul>
+<p>But doing this from first principles would be a mammoth task. The reference manual for the microcontroller is 1100 pages, with the ADC documentation on pages 215-254, and the USB port on pages 622-652. And even if you studied that, you'd still need to read and understand large chunks of the USB specification to use it. The lesson here is that, even if the embedded computer is tiny, it's still highly complex and configurable, and just as on larger computers, we will need to leverage the libraries and code of others if we want to get things working in a reasonable amount of time.</p>
+<p>The good news is that the embedded rust community is vibrant and has released a large collection of <a href="https://github.com/rust-embedded/awesome-embedded-rust">tools and libraries</a>. However, its a small community, and there's only limited examples and tutorials to act as guides. And this is one place where rust's programming power and expressiveness makes life harder for learners. In order to work with a wide range of microcontroller architectures, CPUs, and physical boards, the open source libraries are often quite abstract, and need to be composed in collections of abstract APIs and concrete implementations.</p>
+<p>After research and trial and error I established that the following rust crates would be needed:</p>
+<ul>
+<li><a href="https://crates.io/crates/usb-device">usb-device</a> - abstract API for USB interfaces</li>
+<li><a href="https://crates.io/crates/embedded-hal">embedded-hal</a> - Hardware Abstraction Layer for ADCs (and many other types of hardware)</li>
+<li><a href="https://crates.io/crates/stm32f1xx-hal">stm32f1xx-hal</a>- implementations of the above abstractions for the cpu on the blue pill</li>
+<li><a href="https://crates.io/crates/usbd-hid">usbd-hid</a> - protocol for HID USB devices</li>
+</ul>
+<p>with the overall project cargo dependencies being:</p>
+<pre><code>[dependencies]
+stm32f1xx-hal = { version = &quot;0.5.2&quot;, features = [&quot;rt&quot;, &quot;stm32-usbd&quot;, &quot;stm32f103&quot; ] }
+cortex-m = &quot;0.6&quot;
+cortex-m-rt = { version = &quot;0.6.8&quot;, features = [&quot;device&quot;] }
+panic-semihosting = &quot;0.5.2&quot;
+embedded-hal = &quot;0.2.4&quot;
+usb-device = &quot;0.2.5&quot;
+usbd-serial = &quot;0.1.0&quot;
+usbd-hid = &quot;0.4.4&quot;</code></pre>
+<p>My development strategy was somewhat simplistic - I started with the working blinking led demo, and mutated it by adding features one at at time, often cutting and pasting example code from elsewhere, and then incrementally changing it to what I needed. Whilst unsophisticated, this approach was quicker and easier than getting a deep understanding of each of the libraries I used. A blocker though was that I was unable to find an example of the usbd-hid library being used to implement a joystick. This meant that I had to gain sufficient understanding of the USB <a href="https://www.usb.org/document-library/device-class-definition-hid-111">HID specification</a> to write the <a href="https://github.com/timbod7/fsim-pedals/blob/master/software/fs-pedals/src/joystick.rs">descriptor</a> for a joystick.</p>
+<p>Ultimately the <a href="https://github.com/timbod7/fsim-pedals/tree/master/software/fs-pedals/src">entire code</a> is currently only 160 lines of rust. But it was quite an effort to get there!</p>
+<h1 id="more-details">More Details</h1>
+<p>This project is not a design that I expect others to duplicate - there's several changes I'd make if I were to produce a second device. But in the interest of homebrew collaboration the code and 3d models are published in the project's <a href="https://github.com/timbod7/fsim-pedals">github repo</a>.</p>
+<h1 id="future-plans">Future plans</h1>
+<p>I was expecting to have to implement some calibration in the software, as the potentiometer only turns through a fraction of the total rotational range. And centering the pedals doesn't result in an exactly mid range value from the ADC. But it turns out that the standard PC joystick driver calibration deals with both these issues. I'd still like to sort this out in the embedded code, and not rely on the driver.</p>
+<p>Also, I'd like to make an enclosure for the electronics with some additional desktop slider controls for glider trim, flaps, and airbrakes. But the setup works well enough to get some simulated flight time - and right now that's my priority.</p>
+      ]]></content>
+  </entry>
+  <entry>
+      <title>Homebrew flight simulator pedals</title>
+      <link href="https://tim.dockerz.net//posts/2020-11-23-flighsim-pedals.html"/>
+      <id>https://tim.dockerz.net//posts/2020-11-23-flighsim-pedals.html</id>
+      <updated>2020-11-23T00:00:00Z</updated>
+      <content type="html"><![CDATA[
+        <p>I plan to take some gliding lessons, and hope to accelerate my learning by spending some time on <a href="https://www.condorsoaring.com/">a simulator</a>. But I know this will only be worthwhile if the controls on the sim are a reasonable approximation of the real thing - you don't flight an aircraft with a keyboard and mouse. So I need some half decent controls: a joystick and pedals. It's not too hard to get an old but ok joystick on ebay, but flight sim pedals are expensive and hard to obtain here in Australia. So I set out to construct some of my own. Like all homebrew projects, this was more effort than I expected. But I'm happy with the results, and the project let me work on my 3d design and printing skills, and also some embedded rust development.</p>
+<h1 id="the-hardware">The hardware</h1>
+<p>A internet search for DIY flight pedals returns plenty of images, but few documented designs. I copied the simple mechanical arrangement commonly used, and then set out to replicate it with a combination of aluminium tubing and 3d printed parts. 3d printing is excellent for small detailed components, but lacks the strength required for larger components, and takes too long to print them in any case. Hence I find that an approach using off-the-shelf dimensioned metal or timber from the local harware store, in combination with 3d printing works really well.</p>
+<p>The photos below show the physical construction:</p>
+<p><img src="/posts/2020-11-23-fsim-pedals/IMG_022.JPEG" /> <img src="/posts/2020-11-23-fsim-pedals/IMG_023.JPEG" /> <img src="/posts/2020-11-23-fsim-pedals/IMG_024.JPEG" /></p>
+<p>Below are a couple of the components (rendered using github's built in stl renderer). You can view the other stl files in the <a href="https://github.com/timbod7/fsim-pedals/tree/master/3d-printing">project repo</a>.</p>
+<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-disk.stl"></script>
+<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-mount.stl"></script>
+<h1 id="the-software">The software</h1>
+<p>The <a href="https://www.rust-lang.org/">rust</a> programming language intrigues me. I love the idea of a statically typed, modern programming language that can fit into the niches currently dominated by C/C++. High performance code is one such niche, but another is the ability to run "bare metal" on cheap microcontrollers.</p>
+<p>Hence while a common approach to building a custom USB <a href="https://en.wikipedia.org/wiki/USB_human_interface_device_class">HID controller</a> like this would be to use an arduino with a <a href="https://github.com/MHeironimus/ArduinoJoystickLibrary">usb joystick library</a> with code written in C++, I wanted to use rust, and chose the ubiquitous and cheap <a href="https://jeelabs.org/article/1649a/">"blue pill"</a> board. Getting an embedded development environment up and running can be a huge time suck - luckily this board is well supported in the embedded rust world, with the excellent <a href="https://github.com/TeXitoi/blue-pill-quickstart">blue-pill-quickstart</a> github template project. The project includes enough information to get up and running, and provides links to more detailed documentation. But at the end of it you've only made it as far as the "hello world" of the embedded systems: a blinking led.</p>
+<p>The requirements are simple, we need:</p>
+<ul>
+<li>Code to configure and manage the USB port so that it acts as a (single axis) HID joystick.</li>
+<li>Code to measure the voltage from the potentiometer using the microcontrollers ADC (analog to digital converter), and supply it to the joystick interface</li>
+</ul>
+<p>But doing this from first principles would be a mammoth task. The reference manual for the microcontroller is 1100 pages, with the ADC documentation on pages 215-254, and the USB port on pages 622-652. And even if you studied that, you'd still need to read and understand large chunks of the USB specification to use it. The lesson here is that, even if the embedded computer is tiny, it's still highly complex and configurable, and just as on larger computers, we will need to leverage the libraries and code of others if we want to get things working in a reasonable amount of time.</p>
+<p>The good news is that the embedded rust community is vibrant and has released a large collection of <a href="https://github.com/rust-embedded/awesome-embedded-rust">tools and libraries</a>. However, its a small community, and there's only limited examples and tutorials to act as guides. And this is one place where rust's programming power and expressiveness makes life harder for learners. In order to work with a wide range of microcontroller architectures, CPUs, and physical boards, the open source libraries are often quite abstract, and need to be composed in collections of abstract APIs and concrete implementations.</p>
+<p>After research and trial and error I established that the following rust crates would be needed:</p>
+<ul>
+<li><a href="https://crates.io/crates/usb-device">usb-device</a> - abstract API for USB interfaces</li>
+<li><a href="https://crates.io/crates/embedded-hal">embedded-hal</a> - Hardware Abstraction Layer for ADCs (and many other types of hardware)</li>
+<li><a href="https://crates.io/crates/stm32f1xx-hal">stm32f1xx-hal</a>- implementations of the above abstractions for the cpu on the blue pill</li>
+<li><a href="https://crates.io/crates/usbd-hid">usbd-hid</a> - protocol for HID USB devices</li>
+</ul>
+<p>with the overall project cargo dependencies being:</p>
+<pre><code>[dependencies]
+stm32f1xx-hal = { version = &quot;0.5.2&quot;, features = [&quot;rt&quot;, &quot;stm32-usbd&quot;, &quot;stm32f103&quot; ] }
+cortex-m = &quot;0.6&quot;
+cortex-m-rt = { version = &quot;0.6.8&quot;, features = [&quot;device&quot;] }
+panic-semihosting = &quot;0.5.2&quot;
+embedded-hal = &quot;0.2.4&quot;
+usb-device = &quot;0.2.5&quot;
+usbd-serial = &quot;0.1.0&quot;
+usbd-hid = &quot;0.4.4&quot;</code></pre>
+<p>My development strategy was somewhat simplistic - I started with the working blinking led demo, and mutated it by adding features one at at time, often cutting and pasting example code from elsewhere, and then incrementally changing it to what I needed. Whilst unsophisticated, this approach was quicker and easier than getting a deep understanding of each of the libraries I used. A blocker though was that I was unable to find an example of the usbd-hid library being used to implement a joystick. This meant that I had to gain sufficient understanding of the USB <a href="https://www.usb.org/document-library/device-class-definition-hid-111">HID specification</a> to write the <a href="https://github.com/timbod7/fsim-pedals/blob/master/software/fs-pedals/src/joystick.rs">descriptor</a> for a joystick.</p>
+<p>Ultimately the <a href="https://github.com/timbod7/fsim-pedals/tree/master/software/fs-pedals/src">entire code</a> is currently only 160 lines of rust. But it was quite an effort to get there!</p>
+<h1 id="future-plans">Future plans</h1>
+      ]]></content>
+  </entry>
   <entry>
       <title>A typescript client for an ADL API</title>
       <link href="https://tim.dockerz.net//posts/2020-05-22-adl-example-typescript.html"/>
