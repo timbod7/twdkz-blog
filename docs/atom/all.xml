@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <title>Tim Docker</title>
     <link href="https://tim.dockerz.net/atom/all.xml" rel="self" type="application/rss+xml" />
-  <updated>2020-12-04T05:57:22Z</updated>
+  <updated>2020-12-05T10:30:26Z</updated>
   <author>
       <name>Tim Docker</name>
   </author>
@@ -1911,13 +1911,9 @@ import * as API from &quot;./adl/api&quot;;</code></pre>
 <p><img src="/posts/2020-11-23-fsim-pedals/IMG_0022.JPEG" /> <img src="/posts/2020-11-23-fsim-pedals/IMG_0023.JPEG" /> <img src="/posts/2020-11-23-fsim-pedals/IMG_0024.JPEG" /></p>
 <p>The 3D modelling was done with <a href="https://solvespace.com/index.pl">solvespace</a> for some components, and <a href="https://www.openscad.org/">openscad</a> for others. I favour open source cad tools for the same reason I prefer open source software tools: I want to own my creative efforts indefinitely, and only open source tooling can ensure this.</p>
 <p>The 3D designs are relatively straightforward. If you have access to a 3D printer it's well worth lurking in places like <a href="https://hackaday.com">hackaday</a> to discover tips and trick - I use a couple here.</p>
-<p>The mounts that attach to the baseboard embed M4 nuts inside them. The idea here is that you design the model with an internal void for the nut, and arrange for the 3D printer to pause for the nuts to be inserted, after which printing is resumed and the nut ends up completely encased. A photo of the paused print:</p>
+<p>The <a href="https://github.com/timbod7/fsim-pedals/blob/master/3d-printing/lever-mount.stl">mounts</a> that attach to the baseboard embed M4 nuts inside them. The idea here is that you design the model with an internal void for the nut, and arrange for the 3D printer to pause for the nuts to be inserted, after which printing is resumed and the nut ends up completely encased. A photo of the paused print:</p>
 <p><img src="/posts/2020-11-23-fsim-pedals/IMG_0007.JPEG" /></p>
-<p>The ball joints connect the pedals to the lever arm via threaded rod. These are typically manufactured in metal, and are not inexpensive. The <a href="https://www.thingiverse.com/thing:4080588">3D printed design</a> I used came straight from thingiverse. It's clever in that the ball is printed within the socket that wraps it, with a gap that is tuned to be as tight as one's printer can support. In practice the ball end up slightly fused to the socket, but one simply snaps it loose one printing is completed. I'm surprised how well these joints works - they are smooth enough in operation, and there is little slack. The non-smooth plastic on plastic connection will almost certainly wear out with enough use, but in that case it would be a quick job to reprint replacements. In summary - good enough for this purpose!</p>
-<p>Below are a couple of the components (rendered using github's built in stl renderer). You can view the other stl files in the <a href="https://github.com/timbod7/fsim-pedals/tree/master/3d-printing">project repo</a>.</p>
-<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-disk.stl"></script>
-<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/ball-joint.stl"></script>
-<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-mount.stl"></script>
+<p>The ball joints connect the pedals to the lever arm via threaded rod. These are typically manufactured in metal, and are not inexpensive. The <a href="https://github.com/timbod7/fsim-pedals/blob/master/3d-printing/ball-joint.stl">3D printed design</a> I used came straight <a href="https://www.thingiverse.com/thing:4080588">from thingiverse</a>. It's clever in that the ball is printed within the socket that wraps it, with a gap that is tuned to be as tight as one's printer can support. In practice the ball end up slightly fused to the socket, but one simply snaps it loose one printing is completed. I'm surprised how well these joints works - they are smooth enough in operation, and there is little slack. The non-smooth plastic on plastic connection will almost certainly wear out with enough use, but in that case it would be a quick job to reprint replacements. In summary - good enough for this purpose!</p>
 <h1 id="the-electronics">The electronics</h1>
 <p>The electronics is so simple it doesn't warrant a schematic diagram. It is an off-the-shelf <a href="https://jeelabs.org/article/1649a/">blue pill development board</a>, with a 10k linear potentiometer wired as a voltage divider on to input pin A0. Power is supplied via the USB port.</p>
 <h1 id="the-software">The software</h1>

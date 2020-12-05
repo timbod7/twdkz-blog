@@ -36,7 +36,7 @@ to own my creative efforts indefinitely, and only open source tooling can ensure
 The 3D designs are relatively straightforward. If you have access to a 3D printer it's well worth
 lurking in places like [hackaday][] to discover tips and trick - I use a couple here.
 
-The mounts that attach to the baseboard embed M4 nuts inside them. The idea here is that you design
+The [mounts][levermount] that attach to the baseboard embed M4 nuts inside them. The idea here is that you design
 the model with an internal void for the nut, and arrange for the 3D printer to pause for the nuts
 to be inserted, after which printing is resumed and the nut ends up completely encased. A photo
 of the paused print:
@@ -44,7 +44,7 @@ of the paused print:
 ![](/posts/2020-11-23-fsim-pedals/IMG_0007.JPEG)
 
 The ball joints connect the pedals to the lever arm via threaded rod. These are typically manufactured
-in metal, and are not inexpensive. The [3D printed design][balljoint] I used came straight from thingiverse.
+in metal, and are not inexpensive. The [3D printed design][balljoint] I used came straight [from thingiverse][nimrod].
 It's clever in that the ball is printed within the socket that wraps it, with a gap that is tuned to
 be as tight as one's printer can support. In practice the ball end up slightly fused to the socket, but 
 one simply snaps it loose one printing is completed. I'm surprised how well these joints works - they
@@ -52,18 +52,13 @@ are smooth enough in operation, and there is little slack. The non-smooth plasti
 will almost certainly wear out with enough use, but in that case it would be a quick job to reprint
 replacements. In summary - good enough for this purpose!
 
-Below are a couple of the components (rendered using github's built in stl renderer). You can view the
-other stl files in the [project repo][3dprinting]. 
-
-<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-disk.stl"></script>
-<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/ball-joint.stl"></script>
-<script src="https://embed.github.com/view/3d/timbod7/fsim-pedals/master/3d-printing/lever-mount.stl"></script>
-
 [3dprinting]:https://github.com/timbod7/fsim-pedals/tree/master/3d-printing
 [solvespace]:https://solvespace.com/index.pl
 [openscad]:https://www.openscad.org/
 [hackaday]:https://hackaday.com
-[balljoint]:https://www.thingiverse.com/thing:4080588
+[balljoint]:https://github.com/timbod7/fsim-pedals/blob/master/3d-printing/ball-joint.stl
+[levermount]:https://github.com/timbod7/fsim-pedals/blob/master/3d-printing/lever-mount.stl
+[nimrod]:https://www.thingiverse.com/thing:4080588
 
 # The electronics
 
